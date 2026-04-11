@@ -1,2 +1,17 @@
-// Stub — implemented in Phase 7
-export {};
+export interface HistoryPoint {
+  epoch: number;
+  client_count: number;
+}
+
+export interface HistoryParams {
+  from?: number;
+  to?: number;
+  ap_id?: string;
+}
+
+export interface Device {
+  id: string;
+  name: string;
+  building: string | null;
+}
+

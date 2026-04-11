@@ -1,9 +1,100 @@
-// Stub — implemented in Phase 7
-export default function HistoryPage() {
+import { useState, useEffect } from 'react';
+import { fetchDevices } from '../../api/devices';
+import { useHistory } from './useHistory';
+import HistoryChart from './HistoryChart';
+import HistoryTable from './HistoryTable';
+import StatCard from '../../shared/components/StatCard';
+import LoadingSpinner from '../../shared/components/LoadingSpinner';
+import ErrorBanner from '../../shared/components/ErrorBanner';
+import type { Device, HistoryParams } from './types';
+
+/** Convert epoch seconds to the value expected by <input type="datetime-local"> */
+function toDatetimeLocal(epochSeconds: number): string {
+  const d = new Date(epochSeconds * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-semibold">Client History</h1>
-      <p className="text-gray-500 mt-2">Coming in Phase 7.</p>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  );
+}
+
+/** Parse a datetime-local string back to epoch seconds */
+function fromDatetimeLocal(s: string): number {
+  return Math.floor(new Date(s).getTime() / 1000);
+}
+
+export default function HistoryPage() {
+  const now = Math.floor(Date.now() / 1000);
+  const [from, setFrom] = useState(now - 86400);
+  const [to, setTo] = useState(now);
+  const [apId, setApId] = useState('');
+  const [devices, setDevices] = useState<Device[]>([]);
+
+  useEffect(() => {
+    fetchDevices().then(setDevices).catch(() => {});
+  }, []);
+
+  const params: HistoryParams = { from, to, ap_id: apId || undefined };
+  const { data, loading, error } = useHistory(params);
+
+  const latestCount = data.at(-1)?.client_count ?? 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <h1 className="text-2xl font-semibold text-gray-900">Client History</h1>
+        <StatCard label="Active Clients" value={latestCount} />
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-4 bg-white border rounded-lg p-4">
+        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+          Access Point
+          <select
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm min-w-[200px]"
+            value={apId}
+            onChange={(e) => setApId(e.target.value)}
+          >
+            <option value="">All (Site-wide)</option>
+            {devices.map((d) => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+          From
+          <input
+            type="datetime-local"
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm"
+            value={toDatetimeLocal(from)}
+            onChange={(e) => setFrom(fromDatetimeLocal(e.target.value))}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+          To
+          <input
+            type="datetime-local"
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm"
+            value={toDatetimeLocal(to)}
+            onChange={(e) => setTo(fromDatetimeLocal(e.target.value))}
+          />
+        </label>
+      </div>
+
+      {/* Content */}
+      {error && <ErrorBanner message={error} />}
+      {loading && data.length === 0 ? (
+        <LoadingSpinner />
+      ) : (
+        <div className="space-y-4">
+          <div className="bg-white border rounded-lg p-4">
+            <HistoryChart data={data} />
+          </div>
+          <HistoryTable data={data} />
+        </div>
+      )}
     </div>
   );
 }

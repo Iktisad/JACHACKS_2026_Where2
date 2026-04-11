@@ -1,2 +1,24 @@
-// Stub — implemented in Phase 8
-export {};
+/** Shape returned by GET /api/heatmap/current */
+export interface HeatmapAP {
+  ap_id: string;
+  name: string;
+  building: string | null;
+  map_x: number | null;
+  map_y: number | null;
+  client_count: number;
+}
+
+/**
+ * UI-level record: one physical AP mapped to a room anchor.
+ * Produced by useHeatmap() by parsing the AP name (e.g. "he041-ap-001").
+ * Multiple ApRecords can share the same room — FloorPlanMap spreads them horizontally.
+ */
+export interface ApRecord {
+  id: string;        // room id key, e.g. "he041"
+  room: string;      // room number, e.g. "041"
+  building: string;  // "HE" | "LI"
+  apId: string;      // unique AP id within the room, e.g. "001"
+  clientCount: number;
+  status: 'online' | 'offline';
+}
+
