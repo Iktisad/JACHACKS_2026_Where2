@@ -1,0 +1,36 @@
+### JACHACKS ITS Challenge — API REST Client
+### Requires: VS Code REST Client extension (humao.rest-client)
+
+@baseUrl = http://localhost:3001
+@now = {{$timestamp}}
+@oneDayAgo = {{$timestamp - 86400}}
+
+# ─── Ping ────────────────────────────────────────────────────────────────────
+
+### Health check
+GET {{baseUrl}}/api/ping
+
+# ─── Devices ─────────────────────────────────────────────────────────────────
+
+### Get all access points (ordered by building, then name)
+GET {{baseUrl}}/api/devices
+
+# ─── History ─────────────────────────────────────────────────────────────────
+
+### Get site-wide client history — last 24 hours
+GET {{baseUrl}}/api/history
+
+### Get site-wide client history — custom time range (epoch seconds)
+GET {{baseUrl}}/api/history?from=1744300000&to=1744400000
+
+### Get per-AP client history — last 24 hours
+# Replace ap_id with a real UUID from GET /api/devices
+GET {{baseUrl}}/api/history?ap_id=4866e21e-d83a-3eb5-9c9f-ee55fe2644de
+
+### Get per-AP client history — custom time range
+GET {{baseUrl}}/api/history?ap_id=4866e21e-d83a-3eb5-9c9f-ee55fe2644de&from=1744300000&to=1744400000
+
+# ─── Heatmap ─────────────────────────────────────────────────────────────────
+
+### Get current AP occupancy (latest snapshot per AP + coordinates)
+GET {{baseUrl}}/api/heatmap/current
