@@ -1,0 +1,25 @@
+{
+  "name": "jachacks_its_challenge",
+  "version": "1.0.0",
+  "description": "https://johnabbott-my.sharepoint.com/:f:/g/personal/richard_barsalou_johnabbott_qc_ca/IgBqWcMC2fHYSaB_M9gEATtXAaeylRiI2fPlL7EZoJIGQZ0?e=5ZTx8W floor plans",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently --names server,client --prefix-colors blue,green \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix server && npm run build --prefix client",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Iktisad/JACHACKS_ITS_CHALLENGE.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Iktisad/JACHACKS_ITS_CHALLENGE/issues"
+  },
+  "homepage": "https://github.com/Iktisad/JACHACKS_ITS_CHALLENGE#readme"
+}
