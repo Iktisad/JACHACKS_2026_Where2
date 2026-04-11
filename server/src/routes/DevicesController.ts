@@ -1,4 +1,3 @@
-// Stub — implemented in Phase 5
 import type { Request, Response, Router } from 'express';
 import { Router as createRouter } from 'express';
 import type { Database } from '../db/Database.js';
@@ -12,11 +11,16 @@ export class DevicesController {
   }
 
   private registerRoutes(): void {
-    this.router.get('/', (req, res) => this.getAll(req, res));
+    this.router.get('/', (req, res) => void this.getAll(req, res));
   }
 
-  // Implemented in Phase 5: SELECT * FROM access_points ORDER BY building, name
-  private getAll(_req: Request, res: Response): void {
-    res.json([]);
+  private async getAll(_req: Request, res: Response): Promise<void> {
+    try {
+      const rows = await this.db.getKnex()('access_points')
+        .orderBy([{ column: 'building' }, { column: 'name' }]);
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
   }
 }
