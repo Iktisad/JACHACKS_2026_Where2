@@ -24,6 +24,17 @@ interface Props {
 
 const MAX_POINTS = 36;
 
+/** Return a Y-axis ceiling that gives the data visual breathing room. */
+function getYCeiling(maxVal: number): number {
+  if (maxVal <= 50) return Math.ceil(maxVal * 1.6 / 10) * 10;
+  if (maxVal <= 200) return Math.ceil(maxVal * 1.5 / 50) * 50;
+  if (maxVal <= 500) return Math.ceil(maxVal * 1.4 / 100) * 100;
+  if (maxVal <= 1000) return Math.ceil(maxVal * 1.35 / 100) * 100;
+  if (maxVal <= 1500) return Math.ceil(maxVal * 1.3 / 100) * 100;
+  if (maxVal <= 1800) return Math.ceil(maxVal * 1.2 / 100) * 100;
+  return Math.ceil(maxVal * 1.15 / 100) * 100;
+}
+
 /** Downsample by averaging points into evenly-spaced time buckets. */
 function downsample(points: ChartPoint[]): ChartPoint[] {
   if (points.length <= MAX_POINTS) return points;
@@ -68,6 +79,11 @@ export default function HistoryChart({ data }: Props) {
     return downsample(mapped);
   }, [data]);
 
+  const yMax = useMemo(
+    () => getYCeiling(Math.max(...chartData.map((d) => d.total), 0)),
+    [chartData],
+  );
+
   return (
     <ResponsiveContainer width="100%" height={350}>
       <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
@@ -82,7 +98,7 @@ export default function HistoryChart({ data }: Props) {
         />
         <YAxis
           allowDecimals={false}
-          domain={[0, 'dataMax']}
+          domain={[0, yMax]}
           tick={{ fontSize: 11 }}
         />
         <Tooltip

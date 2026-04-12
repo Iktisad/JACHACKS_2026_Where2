@@ -174,6 +174,17 @@ export default function AdminDashboard() {
       }));
   }, [historyData]);
 
+  const chartYMax = useMemo(() => {
+    const peak = Math.max(...chartData.map((d) => d.total), 0);
+    if (peak <= 50) return Math.ceil(peak * 1.6 / 10) * 10;
+    if (peak <= 200) return Math.ceil(peak * 1.5 / 50) * 50;
+    if (peak <= 500) return Math.ceil(peak * 1.4 / 100) * 100;
+    if (peak <= 1000) return Math.ceil(peak * 1.35 / 100) * 100;
+    if (peak <= 1500) return Math.ceil(peak * 1.3 / 100) * 100;
+    if (peak <= 1800) return Math.ceil(peak * 1.2 / 100) * 100;
+    return Math.ceil(peak * 1.15 / 100) * 100;
+  }, [chartData]);
+
   /* Trend: compare first half vs second half */
   const trend = useMemo(() => {
     if (chartData.length < 4) return { direction: 'flat' as const, pct: 0 };
@@ -441,7 +452,7 @@ export default function AdminDashboard() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
                   <XAxis dataKey="epoch" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={formatEpoch} tick={{ fontSize: 10 }} />
-                  <YAxis allowDecimals={false} domain={[0, 'dataMax']} tick={{ fontSize: 10 }} />
+                  <YAxis allowDecimals={false} domain={[0, chartYMax]} tick={{ fontSize: 10 }} />
                   <Tooltip
                     content={({ payload, label }) => {
                       if (!payload || payload.length === 0) return null;
