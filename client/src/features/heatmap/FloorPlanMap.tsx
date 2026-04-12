@@ -151,6 +151,8 @@ interface Props {
   hideFilters?: boolean;
   /** Hide the built-in timeline scrubber — parent provides its own */
   hideTimeline?: boolean;
+  /** Hide AP dot markers and client count numbers — only heat blobs shown */
+  hideAPDots?: boolean;
 }
 
 function toDatetimeLocal(epochSeconds: number): string {
@@ -190,6 +192,7 @@ export default function FloorPlanMap({
   onTimeToChange,
   hideFilters = false,
   hideTimeline = false,
+  hideAPDots = false,
 }: Props) {
   const [hoveredApKey, setHoveredApKey] = useState<string | null>(null);
 
@@ -370,7 +373,7 @@ export default function FloorPlanMap({
               />
             ))}
 
-            {renderedAPs.map((ap) => {
+            {!hideAPDots && renderedAPs.map((ap) => {
               const apKey = `${ap.building}-${ap.room}-${ap.apId}`;
               const isHovered = hoveredApKey === apKey;
               return (
@@ -411,7 +414,7 @@ export default function FloorPlanMap({
         )}
 
         {/* ── Hover tooltip ────────────────────────────────────────────────── */}
-        {hoveredAp && (
+        {!hideAPDots && hoveredAp && (
           <div
             className="absolute z-10 rounded-xl shadow-lg px-3 py-2 text-sm pointer-events-none -translate-y-full -translate-x-1/2 left-(--tx) top-(--ty)"
             style={{
@@ -429,25 +432,46 @@ export default function FloorPlanMap({
       </div>
 
       {/* ── Legend ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-4 px-1 text-xs" style={{ color: 'var(--muted-foreground)' }}>
-        <span className="font-medium">AP clients:</span>
-        {[
-          { color: "#22c55e", label: "0" },
-          { color: "#84cc16", label: "1-9" },
-          { color: "#eab308", label: "10-19" },
-          { color: "#f97316", label: "20-29" },
-          { color: "#ef4444", label: "30+" },
-        ].map((item) => (
-          <span key={item.label} className="flex items-center gap-1">
-            <span
-              className="inline-block w-3 h-3 rounded-full bg-(--legend-color)"
-              style={{ '--legend-color': item.color } as React.CSSProperties}
-            />
-            {item.label}
-          </span>
-        ))}
-        <span className="ml-4 italic" style={{ color: 'var(--muted-foreground)', opacity: 0.7 }}>Heat radius scales with client count</span>
-      </div>
+      {hideAPDots ? (
+        <div className="flex flex-wrap items-center gap-4 px-1 text-xs" style={{ color: 'var(--muted-foreground)' }}>
+          <span className="font-medium">Occupancy:</span>
+          {[
+            { color: "#22c55e", label: "Empty" },
+            { color: "#84cc16", label: "Low" },
+            { color: "#eab308", label: "Moderate" },
+            { color: "#f97316", label: "High" },
+            { color: "#ef4444", label: "Very High" },
+          ].map((item) => (
+            <span key={item.label} className="flex items-center gap-1">
+              <span
+                className="inline-block w-3 h-3 rounded-full bg-(--legend-color)"
+                style={{ '--legend-color': item.color } as React.CSSProperties}
+              />
+              {item.label}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-4 px-1 text-xs" style={{ color: 'var(--muted-foreground)' }}>
+          <span className="font-medium">AP clients:</span>
+          {[
+            { color: "#22c55e", label: "0" },
+            { color: "#84cc16", label: "1-9" },
+            { color: "#eab308", label: "10-19" },
+            { color: "#f97316", label: "20-29" },
+            { color: "#ef4444", label: "30+" },
+          ].map((item) => (
+            <span key={item.label} className="flex items-center gap-1">
+              <span
+                className="inline-block w-3 h-3 rounded-full bg-(--legend-color)"
+                style={{ '--legend-color': item.color } as React.CSSProperties}
+              />
+              {item.label}
+            </span>
+          ))}
+          <span className="ml-4 italic" style={{ color: 'var(--muted-foreground)', opacity: 0.7 }}>Heat radius scales with client count</span>
+        </div>
+      )}
     </div>
   );
 }

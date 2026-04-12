@@ -6,6 +6,8 @@ import { SitesController } from './routes/SitesController.js';
 import { DevicesController } from './routes/DevicesController.js';
 import { HistoryController } from './routes/HistoryController.js';
 import { HeatmapController } from './routes/HeatmapController.js';
+import { AiController } from './routes/AiController.js';
+import { GeminiService } from './ai/GeminiService.js';
 import { App } from './App.js';
 
 // Composition root — wire all dependencies here, inject everywhere else
@@ -17,8 +19,17 @@ const sitesController = new SitesController(db);
 const devicesController = new DevicesController(db);
 const historyController = new HistoryController(db);
 const heatmapController = new HeatmapController(db);
+const geminiService = new GeminiService({
+  apiKey: config.GEMINI_API_KEY,
+  model: config.GEMINI_MODEL,
+  maxOutputTokens: config.GEMINI_MAX_TOKENS,
+  temperature: config.GEMINI_TEMPERATURE,
+  topP: config.GEMINI_TOP_P,
+  timeoutMs: config.GEMINI_TIMEOUT_MS,
+});
+const aiController = new AiController(db, geminiService);
 
-const app = new App(config, db, poller, sitesController, devicesController, historyController, heatmapController);
+const app = new App(config, db, poller, sitesController, devicesController, historyController, heatmapController, aiController);
 
 app.start().catch((err: unknown) => {
   console.error('[fatal]', err);

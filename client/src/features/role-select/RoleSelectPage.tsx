@@ -19,11 +19,12 @@ export default function RoleSelectPage() {
     <div className="min-h-screen flex flex-col lg:flex-row overflow-hidden" style={{ background: 'var(--background)' }}>
 
       {/* ── Student Panel ─────────────────────────────────────── */}
-      <button
+      <div
         onClick={() => navigate('/student')}
+        onKeyDown={(e) => e.key === 'Enter' && navigate('/student')}
         onMouseEnter={() => setHovered('student')}
         onMouseLeave={() => setHovered(null)}
-        className="relative flex-1 flex flex-col items-center justify-center text-left cursor-pointer border-0 outline-none transition-all duration-500"
+        className="relative flex-1 flex flex-col items-center justify-center text-left cursor-pointer transition-all duration-500"
         style={{
           minHeight: '48vh',
           background: hovered === 'student'
@@ -158,7 +159,7 @@ export default function RoleSelectPage() {
             Credentials
           </button>
         </div>
-      </button>
+      </div>
 
       {/* ── Center Divider / Logo ─────────────────────────────── */}
       <div
@@ -191,11 +192,12 @@ export default function RoleSelectPage() {
       </div>
 
       {/* ── Admin Panel ───────────────────────────────────────── */}
-      <button
+      <div
         onClick={() => navigate('/admin')}
+        onKeyDown={(e) => e.key === 'Enter' && navigate('/admin')}
         onMouseEnter={() => setHovered('admin')}
         onMouseLeave={() => setHovered(null)}
-        className="relative flex-1 flex flex-col items-center justify-center text-left cursor-pointer border-0 outline-none transition-all duration-500"
+        className="relative flex-1 flex flex-col items-center justify-center text-left cursor-pointer transition-all duration-500"
         style={{
           minHeight: '48vh',
           background: hovered === 'admin'
@@ -330,7 +332,7 @@ export default function RoleSelectPage() {
             Credentials
           </button>
         </div>
-      </button>
+      </div>
     </div>
   )
 }
