@@ -1,4 +1,4 @@
-const CACHE_NAME = 'its-challenge-v1';
+const CACHE_NAME = 'its-challenge-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -28,35 +28,69 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first for API, cache-first for static assets
+// Fetch handler
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET and cross-origin
+  // Only handle same-origin GETs
   if (request.method !== 'GET' || url.origin !== location.origin) return;
 
-  // API calls: network-first with no cache fallback
+  // API calls: network-first, offline JSON fallback, never cache
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request).catch(() => new Response(JSON.stringify({ error: 'offline' }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' },
-      }))
+      fetch(request).catch(() =>
+        new Response(JSON.stringify({ error: 'offline' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
     );
     return;
   }
 
-  // Static assets: stale-while-revalidate
+  // JS/CSS chunks from Vite (hashed filenames under /assets/): network-first,
+  // cache on success, fall back to cache. Never return undefined.
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(async (cache) => {
+        try {
+          const response = await fetch(request);
+          if (response.ok) cache.put(request, response.clone());
+          return response;
+        } catch {
+          const cached = await cache.match(request);
+          return cached ?? new Response('Asset unavailable offline', { status: 503 });
+        }
+      })
+    );
+    return;
+  }
+
+  // App shell / navigation requests: serve cached shell, fall back to network
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       const cached = await cache.match(request);
-      const fetchPromise = fetch(request).then((response) => {
+      if (cached) {
+        // Revalidate in background
+        fetch(request).then((response) => {
+          if (response.ok) cache.put(request, response.clone());
+        }).catch(() => {});
+        return cached;
+      }
+      // Not cached yet — go to network
+      try {
+        const response = await fetch(request);
         if (response.ok) cache.put(request, response.clone());
         return response;
-      }).catch(() => cached);
-
-      return cached || fetchPromise;
+      } catch {
+        // Last resort: try serving '/' for navigation requests
+        if (request.mode === 'navigate') {
+          const shell = await cache.match('/');
+          if (shell) return shell;
+        }
+        return new Response('Offline', { status: 503 });
+      }
     })
   );
 });

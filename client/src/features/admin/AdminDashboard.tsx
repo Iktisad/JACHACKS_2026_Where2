@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { useHeatmap } from '../heatmap/useHeatmap';
 import { useHistory } from '../history/useHistory';
-import { formatEpochFull } from '../../shared/utils/formatters';
+import { formatEpoch, formatEpochFull } from '../../shared/utils/formatters';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import ErrorBanner from '../../shared/components/ErrorBanner';
 import type { ApRecord } from '../heatmap/types';
