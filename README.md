@@ -1,33 +1,69 @@
-https://johnabbott-my.sharepoint.com/:f:/g/personal/richard_barsalou_johnabbott_qc_ca/IgBqWcMC2fHYSaB_M9gEATtXAaeylRiI2fPlL7EZoJIGQZ0?e=5ZTx8W
-floor plans
+# JAC Campus Occupancy Dashboard
 
-#Objective
-Use the Unifi API to query the site "JAC Campus"
-- Create a history of number of active wireless clients in site (graph, table, etc.)
-- Create live heatmaps of occupancy based on number of wireless clients connected to rooms' corresponding access point(s)
+A real-time occupancy monitoring and study space finder for John Abbott College, built for the **JACHACKS ITS Challenge 2026**.
 
-#Rules
-- provided with your unique API key for the event, PDF floor plans of Library and Herzberg building (both will be occupied during the event)
-- WARNING: your API key has read/write/post permissions to a LIVE environment, do not use any DELETE, PUT, PATCH or POST methods
-- do not create any new credentials (users, keys, etc.) in the platform
-- all activity will be logged and may be reviewed
+## Team
 
-###Helpful tools/tips
-- https://developer.ui.com/network/v10.1.84/gettingstarted
-- https://unifi.ui.com/consoles/a2ceb993-b1d8-4ab6-b4fa-d77c421d266d/unifi-api/network?site=default (login required?)
-- JSON to table viewer https://jsongrid.com/json-grid
-- Library prefix = li, Herzberg = he
+- Iktisad Rashid
+- Mahimur Rahman Khan
+- Fatema Ahsan Meem
 
+## What It Does
 
-###Examples
-List all sites:
-curl -k -X GET "https://cd5d2039-c421-41c5-8453-d51b5ed8e6ec.unifi-hosting.ui.com/proxy/network/integration/v1/sites" -H "X-API-KEY: YOUR_API_KEY" -H "Accept: application/json"
+- **Live Heatmaps** — Interactive floor plan overlays showing wireless client density per access point in the Library and Herzberg buildings, updated every 5 minutes
+- **Historical Charts** — Time-series graphs and tables of campus-wide client counts over time
+- **AI Study Spot Recommender** — Students describe their preferences (building, environment, session length) and the app recommends the best available space based on live occupancy data
+- **Student & Admin Views** — Role-based UI: students get a mobile-friendly space finder; admins get a full dashboard with heatmaps and history analytics
+- **PWA Support** — Installable as a mobile app on Android and iOS
 
-Get all devices in site XYZ
-curl -k -X GET "https://cd5d2039-c421-41c5-8453-d51b5ed8e6ec.unifi-hosting.ui.com/proxy/network/integration/v1/sites/b199057b-eb3e-38f8-a0c2-79aa971c44fe/devices" -H "X-API-KEY: YOUR_API_KEY" -H "Accept: application/json"
+## Tech Stack
 
-Get all connected clients
-curl -L -g  "https://cd5d2039-c421-41c5-8453-d51b5ed8e6ec.unifi-hosting.ui.com/proxy/network/integration/v1/sites/b199057b-eb3e-38f8-a0c2-79aa971c44fe/clients?filter={type.eq('wireless'}" -H "Accept: application/json" -H "X-API-Key: YOUR_API_KEY"
+### Frontend
+| Library | Purpose |
+|---|---|
+| React 19 + Vite | UI framework and build tooling |
+| TypeScript | Type safety |
+| Tailwind CSS v4 | Styling |
+| react-leaflet / Leaflet | Interactive floor plan maps |
+| Recharts | Time-series occupancy charts |
+| React Router v7 | Client-side routing |
+| Lucide React | Icons |
+| Motion (Framer Motion) | Animations |
+| Radix UI | Accessible UI primitives |
 
-Get all connected wireless clients (max 200)
-curl -k -X GET "https://cd5d2039-c421-41c5-8453-d51b5ed8e6ec.unifi-hosting.ui.com/proxy/network/integration/v1/sites/88f7af54-98f8-306a-a1c7-c9349722b1f6/clients?limit=200&filter={type.eq('WIRELESS')}" -H "X-API-KEY: YOUR_API_KEY"
+### Backend
+| Library | Purpose |
+|---|---|
+| Node.js + Express 5 | REST API server |
+| TypeScript + tsx | Type-safe server code |
+| better-sqlite3 + Knex | Local SQLite database with migrations |
+| node-cron | Scheduled polling of UniFi API every 5 minutes |
+| @google/genai | Google Gemini API for AI recommendations |
+| morgan | HTTP request logging |
+| cors | Cross-origin request handling |
+
+## AI Integration
+
+The app integrates **Google Gemini** (`@google/genai` SDK). When a student submits their study preferences, the backend sends a structured prompt to Gemini that includes live occupancy data for all available spaces. Gemini returns a recommended space and a natural-language explanation for the suggestion.
+
+## Data Source
+
+Live data is pulled from the **UniFi Network API** on the JAC campus controller. The backend polls every 5 minutes via a cron job and stores snapshots in a local SQLite database, enabling both real-time views and historical trend analysis.
+
+## Running the Project
+
+```bash
+# From the project root
+npm install
+
+# Install server and client dependencies
+cd server && npm install
+cd ../client && npm install
+
+# Configure environment variables
+cp .env.example .env
+# Fill in: UNIFI_API_KEY, UNIFI_HOST, UNIFI_SITE_ID, GEMINI_API_KEY
+
+# Start both servers concurrently
+cd .. && npm run dev
+```
