@@ -62,8 +62,9 @@ export function useHeatmap(siteId?: string): UseHeatmapResult {
           return record ? [record] : [];
         });
         setAps(records);
-        setTotalWireless(data.reduce((sum, ap) => sum + ap.client_count, 0));
-        setTotalWired(data.reduce((sum, ap) => sum + ap.wired_client_count, 0));
+        // Only count clients from APs that matched HE/LI (visible on the floor plan)
+        setTotalWireless(records.reduce((sum, r) => sum + r.clientCount, 0));
+        setTotalWired(records.reduce((sum, r) => sum + r.wiredCount, 0));
         setError(null);
         setLastUpdated(Math.floor(Date.now() / 1000));
       })
