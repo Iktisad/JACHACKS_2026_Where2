@@ -25,7 +25,7 @@ interface Props {
 export default function HistoryChart({ data }: Props) {
   if (data.length === 0) {
     return (
-      <p className="text-gray-400 text-sm py-12 text-center">
+      <p className="text-sm py-12 text-center" style={{ color: 'var(--muted-foreground)' }}>
         No data for selected range.
       </p>
     );
@@ -45,7 +45,7 @@ export default function HistoryChart({ data }: Props) {
   return (
     <ResponsiveContainer width="100%" height={350}>
       <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
         <XAxis
           dataKey="epoch"
           type="number"
@@ -65,10 +65,13 @@ export default function HistoryChart({ data }: Props) {
             if (!payload || payload.length === 0) return null;
             const d = payload[0].payload as ChartPoint;
             return (
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-3 py-2 text-sm">
-                <p className="text-gray-500 text-xs mb-1">{formatEpochFull(Number(label))}</p>
-                <p className="font-semibold text-gray-900">{d.total} clients</p>
-                <p className="text-gray-500 text-xs">{d.wireless} wireless · {d.wired} wired</p>
+              <div
+                className="rounded-xl shadow-sm px-3 py-2 text-sm"
+                style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+              >
+                <p className="text-xs mb-1" style={{ color: 'var(--muted-foreground)' }}>{formatEpochFull(Number(label))}</p>
+                <p className="font-semibold" style={{ color: 'var(--foreground)' }}>{d.total} clients</p>
+                <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{d.wireless} wireless · {d.wired} wired</p>
               </div>
             );
           }}
@@ -77,7 +80,7 @@ export default function HistoryChart({ data }: Props) {
           type="monotone"
           dataKey="total"
           name="Clients"
-          stroke="#2563eb"
+          stroke="var(--primary)"
           dot={false}
           strokeWidth={2}
         />

@@ -54,7 +54,7 @@ export default function HeatmapPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Occupancy Heatmap</h1>
+      <h1 className="text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>Occupancy Heatmap</h1>
 
       {error && <ErrorBanner message={error} />}
       {timelineError && <ErrorBanner message={timelineError} />}
@@ -88,7 +88,7 @@ export default function HeatmapPage() {
       )}
 
       {!timelineMode && lastUpdated && (
-        <p className="text-xs text-gray-400 text-right">
+        <p className="text-xs text-right" style={{ color: 'var(--muted-foreground)' }}>
           Last updated: {formatEpochFull(lastUpdated)}
         </p>
       )}

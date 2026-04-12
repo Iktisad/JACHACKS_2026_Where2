@@ -10,19 +10,19 @@ export default function HistoryTable({ data }: Props) {
   const rows = data.slice(-50).reverse();
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="overflow-hidden">
       <div className="overflow-y-auto max-h-70">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
+          <thead className="sticky top-0" style={{ background: 'var(--muted)', borderBottom: '1px solid var(--border)' }}>
             <tr>
-              <th className="px-4 py-2 text-left font-medium text-gray-600">Timestamp</th>
-              <th className="px-4 py-2 text-right font-medium text-gray-600">Clients</th>
+              <th className="px-4 py-2 text-left font-medium" style={{ color: 'var(--muted-foreground)' }}>Timestamp</th>
+              <th className="px-4 py-2 text-right font-medium" style={{ color: 'var(--muted-foreground)' }}>Clients</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={2} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={2} className="px-4 py-8 text-center" style={{ color: 'var(--muted-foreground)' }}>
                   No data
                 </td>
               </tr>
@@ -30,12 +30,13 @@ export default function HistoryTable({ data }: Props) {
               rows.map((row) => (
                 <tr
                   key={row.epoch}
-                  className="border-t border-gray-100 hover:bg-gray-50"
+                  className="transition-colors"
+                  style={{ borderTop: '1px solid var(--border)' }}
                 >
-                  <td className="px-4 py-2 text-gray-700">
+                  <td className="px-4 py-2" style={{ color: 'var(--muted-foreground)' }}>
                     {formatEpochFull(row.epoch)}
                   </td>
-                  <td className="px-4 py-2 text-right font-medium text-gray-900">
+                  <td className="px-4 py-2 text-right font-medium" style={{ color: 'var(--foreground)' }}>
                     {row.client_count}
                   </td>
                 </tr>

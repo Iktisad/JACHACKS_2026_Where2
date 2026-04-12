@@ -7,34 +7,37 @@ import { StudentApp } from '@/student/StudentApp'
 function AdminShell() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
+      {/* Top bar */}
       <nav
-        className="px-6 py-4 flex items-center gap-6 shadow-sm"
-        style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }}
+        className="px-6 py-3 flex items-center gap-1 shadow-sm"
+        style={{ background: 'var(--hero)', color: 'var(--hero-foreground)' }}
       >
-        <NavLink to="/" className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>
-          UniFi Dashboard
+        <NavLink to="/" className="font-semibold text-lg tracking-tight text-white mr-6">
+          WhereTo Admin
         </NavLink>
-        <NavLink
-          to="/admin/history"
-          style={({ isActive }) => ({ color: isActive ? 'var(--primary)' : 'var(--muted-foreground)' })}
-          className="text-sm font-medium transition-colors"
-        >
-          History
-        </NavLink>
-        <NavLink
-          to="/admin/heatmap"
-          style={({ isActive }) => ({ color: isActive ? 'var(--primary)' : 'var(--muted-foreground)' })}
-          className="text-sm font-medium transition-colors"
-        >
-          Heatmap
-        </NavLink>
+        {[
+          { to: '/admin/history', label: 'History' },
+          { to: '/admin/heatmap', label: 'Heatmap' },
+        ].map(({ to, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className="text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+            style={({ isActive }) => ({
+              color: isActive ? '#ffffff' : 'rgba(221,242,253,0.65)',
+              background: isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
+            })}
+          >
+            {label}
+          </NavLink>
+        ))}
         <div className="ml-auto">
           <NavLink
             to="/"
             className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-            style={{ color: 'var(--muted-foreground)', background: 'var(--muted)' }}
+            style={{ color: 'rgba(221,242,253,0.6)', background: 'rgba(255,255,255,0.08)' }}
           >
-            ← Switch Role
+            Switch Role
           </NavLink>
         </div>
       </nav>

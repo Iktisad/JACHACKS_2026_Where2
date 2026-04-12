@@ -40,7 +40,7 @@ export default function HistoryPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-gray-900">Client History</h1>
+        <h1 className="text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>Client History</h1>
         <div className="flex gap-3">
           <StatCard label="Wireless Clients" value={latestWireless} />
           <StatCard label="Wired Clients" value={latestWired} />
@@ -48,11 +48,15 @@ export default function HistoryPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-end gap-4 bg-white border rounded-lg p-4">
-        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+      <div
+        className="flex flex-wrap items-end gap-4 rounded-xl p-4"
+        style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+      >
+        <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
           Site
           <select
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm min-w-45"
+            className="rounded-lg px-2 py-1.5 text-sm min-w-45"
+            style={{ border: '1px solid var(--border)', background: 'var(--input-background)', color: 'var(--foreground)' }}
             value={siteId}
             onChange={(e) => setSiteId(e.target.value)}
           >
@@ -63,21 +67,23 @@ export default function HistoryPage() {
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+        <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
           From
           <input
             type="datetime-local"
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm"
+            className="rounded-lg px-2 py-1.5 text-sm"
+            style={{ border: '1px solid var(--border)', background: 'var(--input-background)', color: 'var(--foreground)' }}
             value={toDatetimeLocal(from)}
             onChange={(e) => setFrom(fromDatetimeLocal(e.target.value))}
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+        <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
           To
           <input
             type="datetime-local"
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm"
+            className="rounded-lg px-2 py-1.5 text-sm"
+            style={{ border: '1px solid var(--border)', background: 'var(--input-background)', color: 'var(--foreground)' }}
             value={toDatetimeLocal(to)}
             onChange={(e) => setTo(fromDatetimeLocal(e.target.value))}
           />
@@ -90,19 +96,21 @@ export default function HistoryPage() {
         <LoadingSpinner />
       ) : (
         <div className="space-y-4">
-          <div className="bg-white border rounded-lg p-4">
+          <div className="rounded-xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
             <HistoryChart data={data} />
           </div>
 
           {/* Collapsible data table */}
-          <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="rounded-xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
             <button
-              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors cursor-pointer"
+              style={{ color: 'var(--foreground)' }}
               onClick={() => setTableOpen((v) => !v)}
             >
               <span>Data Table ({data.length} points)</span>
               <svg
-                className={`w-4 h-4 text-gray-400 transition-transform${tableOpen ? ' rotate-180' : ''}`}
+                className={`w-4 h-4 transition-transform${tableOpen ? ' rotate-180' : ''}`}
+                style={{ color: 'var(--muted-foreground)' }}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
