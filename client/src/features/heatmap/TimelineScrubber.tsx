@@ -58,7 +58,7 @@ export default function TimelineScrubber({ epochs, scrubIndex, onChange, loading
 
   if (epochs.length === 0) {
     return (
-      <div className="flex items-center justify-center h-16 text-sm text-gray-400">
+      <div className="flex items-center justify-center h-16 text-sm" style={{ color: 'var(--muted-foreground)' }}>
         {loading ? 'Loading snapshots…' : 'No snapshots in this range'}
       </div>
     );
@@ -68,8 +68,11 @@ export default function TimelineScrubber({ epochs, scrubIndex, onChange, loading
     <div className="select-none space-y-1">
       {/* Current timestamp badge */}
       <div className="flex items-center justify-between text-xs mb-2">
-        <span className="text-gray-500">Scrub to explore historical occupancy</span>
-        <span className="bg-blue-50 border border-blue-200 text-blue-800 font-medium px-2.5 py-1 rounded-full">
+        <span style={{ color: 'var(--muted-foreground)' }}>Scrub to explore historical occupancy</span>
+        <span
+          className="font-medium px-2.5 py-1 rounded-full"
+          style={{ background: 'var(--muted)', border: '1px solid var(--border)', color: 'var(--primary)' }}
+        >
           {formatEpochFull(currentEpoch)}
         </span>
       </div>
@@ -82,12 +85,12 @@ export default function TimelineScrubber({ epochs, scrubIndex, onChange, loading
         onPointerMove={handlePointerMove}
       >
         {/* Base track line */}
-        <div className="absolute top-5 left-0 right-0 h-1.5 bg-gray-200 rounded-full" />
+        <div className="absolute top-5 left-0 right-0 h-1.5 rounded-full" style={{ background: 'var(--border)' }} />
 
         {/* Filled portion */}
         <div
-          className="absolute top-5 left-0 h-1.5 bg-blue-400 rounded-full pointer-events-none"
-          style={{ width: `${progress * 100}%` }}
+          className="absolute top-5 left-0 h-1.5 rounded-full pointer-events-none"
+          style={{ width: `${progress * 100}%`, background: 'var(--primary-light)' }}
         />
 
         {/* Tick marks */}
@@ -102,12 +105,12 @@ export default function TimelineScrubber({ epochs, scrubIndex, onChange, loading
               style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
             >
               <div
-                className={`w-0.5 rounded-full transition-colors ${
-                  isCurrent ? 'bg-blue-600 h-4 top-3.5' :
-                  isActive  ? 'bg-blue-400 h-2.5 top-4.5' :
-                              'bg-gray-300 h-2.5 top-4.5'
-                } absolute`}
-                style={{ top: isCurrent ? '10px' : '14px' }}
+                className="w-0.5 rounded-full transition-colors absolute"
+                style={{
+                  top: isCurrent ? '10px' : '14px',
+                  height: isCurrent ? '1rem' : '0.625rem',
+                  background: isCurrent ? 'var(--primary)' : isActive ? 'var(--primary-light)' : 'var(--border)',
+                }}
               />
             </div>
           );
@@ -115,8 +118,8 @@ export default function TimelineScrubber({ epochs, scrubIndex, onChange, loading
 
         {/* Draggable handle */}
         <div
-          className="absolute top-3.5 w-5 h-5 bg-white border-2 border-blue-600 rounded-full shadow-md pointer-events-none transition-[left] duration-75"
-          style={{ left: `${progress * 100}%`, transform: 'translateX(-50%)' }}
+          className="absolute top-3.5 w-5 h-5 rounded-full shadow-md pointer-events-none transition-[left] duration-75"
+          style={{ left: `${progress * 100}%`, transform: 'translateX(-50%)', background: 'var(--card)', border: '2px solid var(--primary)' }}
         />
       </div>
 
@@ -128,8 +131,9 @@ export default function TimelineScrubber({ epochs, scrubIndex, onChange, loading
           return (
             <span
               key={idx}
-              className="absolute text-xs text-gray-400 whitespace-nowrap"
+              className="absolute text-xs whitespace-nowrap"
               style={{
+                color: 'var(--muted-foreground)',
                 left: `${pct}%`,
                 transform: anchor === 'center' ? 'translateX(-50%)' :
                            anchor === 'right'  ? 'translateX(-100%)' : 'none',
@@ -142,7 +146,7 @@ export default function TimelineScrubber({ epochs, scrubIndex, onChange, loading
       </div>
 
       {/* Snapshot count */}
-      <p className="text-xs text-gray-400 text-right pt-0.5">
+      <p className="text-xs text-right pt-0.5" style={{ color: 'var(--muted-foreground)' }}>
         {clampedIndex + 1} / {epochs.length} snapshots
       </p>
     </div>

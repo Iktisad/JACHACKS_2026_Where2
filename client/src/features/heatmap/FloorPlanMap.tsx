@@ -147,6 +147,10 @@ interface Props {
   timeTo: number;
   onTimeFromChange: (v: number) => void;
   onTimeToChange: (v: number) => void;
+  /** Hide the top filter row (site/building/level/stats) — parent manages them */
+  hideFilters?: boolean;
+  /** Hide the built-in timeline scrubber — parent provides its own */
+  hideTimeline?: boolean;
 }
 
 function toDatetimeLocal(epochSeconds: number): string {
@@ -184,6 +188,8 @@ export default function FloorPlanMap({
   timeTo,
   onTimeFromChange,
   onTimeToChange,
+  hideFilters = false,
+  hideTimeline = false,
 }: Props) {
   const [hoveredApKey, setHoveredApKey] = useState<string | null>(null);
 
@@ -210,13 +216,14 @@ export default function FloorPlanMap({
   const floorSvg = building !== '' ? FLOOR_PLAN_SVG[`${building}-${level}`] : undefined;
 
   return (
-    <div className="w-full overflow-auto border rounded-lg bg-white p-3 space-y-3">
+    <div className="w-full overflow-auto rounded-xl p-3 space-y-3" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
       {/* ── Filters row ────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-end gap-4">
-        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+      {!hideFilters && <div className="flex flex-wrap items-end gap-4">
+        <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
           Site
           <select
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm min-w-40"
+            className="rounded-lg px-2 py-1.5 text-sm min-w-40"
+            style={{ border: '1px solid var(--border)', background: 'var(--input-background)', color: 'var(--foreground)' }}
             value={siteId}
             onChange={(e) => onSiteChange(e.target.value)}
           >
@@ -227,10 +234,11 @@ export default function FloorPlanMap({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+        <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
           Building
           <select
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm min-w-40"
+            className="rounded-lg px-2 py-1.5 text-sm min-w-40"
+            style={{ border: '1px solid var(--border)', background: 'var(--input-background)', color: 'var(--foreground)' }}
             value={building}
             onChange={(e) => onBuildingChange(e.target.value as Building)}
           >
@@ -240,10 +248,11 @@ export default function FloorPlanMap({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+        <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
           Level
           <select
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm min-w-36"
+            className="rounded-lg px-2 py-1.5 text-sm min-w-36"
+            style={{ border: '1px solid var(--border)', background: 'var(--input-background)', color: 'var(--foreground)' }}
             value={level}
             disabled={building === ''}
             onChange={(e) => onLevelChange(e.target.value)}
@@ -257,45 +266,37 @@ export default function FloorPlanMap({
         </label>
 
         <div className="ml-auto flex items-end gap-4 pb-0.5">
-          <button
-            className={`text-xs px-2.5 py-1.5 rounded border font-medium transition-colors self-end ${
-              timelineMode
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-            }`}
-            onClick={() => onTimelineModeChange(!timelineMode)}
-          >
-            {timelineMode ? 'Live' : 'History'}
-          </button>
           <div className="text-right">
-            <p className="text-xs text-gray-500">Wireless</p>
-            <p className="text-lg font-semibold text-gray-900">{totalWireless}</p>
+            <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Wireless</p>
+            <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{totalWireless}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-500">Wired</p>
-            <p className="text-lg font-semibold text-gray-900">{totalWired}</p>
+            <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Wired</p>
+            <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{totalWired}</p>
           </div>
-          <div className="text-right border-l border-gray-200 pl-4">
-            <p className="text-xs text-gray-500">APs on floor</p>
-            <p className="text-lg font-semibold text-gray-900">{renderedAPs.length}</p>
+          <div className="text-right pl-4" style={{ borderLeft: '1px solid var(--border)' }}>
+            <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>APs on floor</p>
+            <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{renderedAPs.length}</p>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ── Timeline scrubber — shown below filters when history mode is active ── */}
-      {timelineMode && (
-        <div className="border-t border-gray-100 pt-3 space-y-2">
+      {!hideTimeline && timelineMode && (
+        <div className="pt-3 space-y-2" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="datetime-local"
-              className="border border-gray-300 rounded px-2 py-1 text-xs text-gray-700"
+              className="rounded-lg px-2 py-1 text-xs"
+              style={{ border: '1px solid var(--border)', background: 'var(--input-background)', color: 'var(--foreground)' }}
               value={toDatetimeLocal(timeFrom)}
               onChange={(e) => { onTimeFromChange(fromDatetimeLocal(e.target.value)); onTimelineScrubChange(0); }}
             />
-            <span className="text-xs text-gray-400">→</span>
+            <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>→</span>
             <input
               type="datetime-local"
-              className="border border-gray-300 rounded px-2 py-1 text-xs text-gray-700"
+              className="rounded-lg px-2 py-1 text-xs"
+              style={{ border: '1px solid var(--border)', background: 'var(--input-background)', color: 'var(--foreground)' }}
               value={toDatetimeLocal(timeTo)}
               onChange={(e) => { onTimeToChange(fromDatetimeLocal(e.target.value)); onTimelineScrubChange(0); }}
             />
@@ -312,11 +313,11 @@ export default function FloorPlanMap({
       {/* ── Floor plan + SVG overlay ────────────────────────────────────────── */}
       <div className="relative w-full aspect-1056/816">
         {building === '' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-50 rounded border border-dashed border-gray-300">
-            <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl" style={{ background: 'var(--muted)', border: '1px dashed var(--border)' }}>
+            <svg className="w-10 h-10" style={{ color: 'var(--secondary-light)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5M3.75 3v18m16.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
             </svg>
-            <p className="text-sm text-gray-500">Select a building to view the floor plan</p>
+            <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>Select a building to view the floor plan</p>
           </div>
         )}
 
@@ -329,12 +330,12 @@ export default function FloorPlanMap({
         )}
 
         {building !== '' && !siteHasFloorPlan && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/60 rounded">
-            <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.6)' }}>
+            <svg className="w-10 h-10" style={{ color: 'var(--muted-foreground)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
             </svg>
-            <p className="text-sm font-medium text-gray-600">Floor plan not available for this site</p>
-            <p className="text-xs text-gray-400">Coming soon</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Floor plan not available for this site</p>
+            <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Coming soon</p>
           </div>
         )}
 
@@ -388,7 +389,7 @@ export default function FloorPlanMap({
                     cy={ap.renderY}
                     r={8}
                     fill={getApColor(ap)}
-                    stroke={isHovered ? "#1d4ed8" : "#fff"}
+                    stroke={isHovered ? "#164863" : "#fff"}
                     strokeWidth={isHovered ? 2.5 : 2}
                   />
                   <text
@@ -412,21 +413,23 @@ export default function FloorPlanMap({
         {/* ── Hover tooltip ────────────────────────────────────────────────── */}
         {hoveredAp && (
           <div
-            className="absolute z-10 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm pointer-events-none -translate-y-full -translate-x-1/2 left-(--tx) top-(--ty)"
+            className="absolute z-10 rounded-xl shadow-lg px-3 py-2 text-sm pointer-events-none -translate-y-full -translate-x-1/2 left-(--tx) top-(--ty)"
             style={{
               '--tx': `${(hoveredAp.renderX / SVG_WIDTH) * 100}%`,
               '--ty': `${(hoveredAp.renderY / SVG_HEIGHT) * 100}%`,
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
             } as React.CSSProperties}
           >
-            <p className="font-semibold text-gray-900">Room {hoveredAp.room} · AP {hoveredAp.apId}</p>
-            <p className="text-gray-900 font-medium">{totalClients(hoveredAp)} clients</p>
-            <p className="text-xs text-gray-500">{hoveredAp.clientCount} wireless · {hoveredAp.wiredCount} wired</p>
+            <p className="font-semibold" style={{ color: 'var(--foreground)' }}>Room {hoveredAp.room} · AP {hoveredAp.apId}</p>
+            <p className="font-medium" style={{ color: 'var(--foreground)' }}>{totalClients(hoveredAp)} clients</p>
+            <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{hoveredAp.clientCount} wireless · {hoveredAp.wiredCount} wired</p>
           </div>
         )}
       </div>
 
       {/* ── Legend ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-4 px-1 text-xs text-gray-600">
+      <div className="flex flex-wrap items-center gap-4 px-1 text-xs" style={{ color: 'var(--muted-foreground)' }}>
         <span className="font-medium">AP clients:</span>
         {[
           { color: "#22c55e", label: "0" },
@@ -443,7 +446,7 @@ export default function FloorPlanMap({
             {item.label}
           </span>
         ))}
-        <span className="ml-4 text-gray-400 italic">Heat radius scales with client count</span>
+        <span className="ml-4 italic" style={{ color: 'var(--muted-foreground)', opacity: 0.7 }}>Heat radius scales with client count</span>
       </div>
     </div>
   );

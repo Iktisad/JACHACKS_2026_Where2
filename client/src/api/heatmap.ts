@@ -34,6 +34,7 @@ export async function fetchHeatmap(siteId?: string): Promise<HeatmapAP[]> {
     ...r,
     client_count: Number(r.client_count),
     wired_client_count: Number(r.wired_client_count),
+    epoch: r.epoch != null ? Number(r.epoch) : null,
   }));
 }
 

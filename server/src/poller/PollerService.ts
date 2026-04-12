@@ -1,5 +1,15 @@
 import type { UnifiApiService } from '../unifi/UnifiApiService.js';
+import type { UnifiDevice, UnifiClient } from '../unifi/types.js';
 import type { Database } from '../db/Database.js';
+import type { Knex } from 'knex';
+
+/** Data fetched from the UniFi API for a single site (no DB writes yet). */
+interface SiteFetchResult {
+  siteId: string;
+  siteName: string;
+  aps: UnifiDevice[];
+  clients: UnifiClient[];
+}
 
 export class PollerService {
   private intervalId: NodeJS.Timeout | null = null;
@@ -32,20 +42,36 @@ export class PollerService {
       const seen = new Set<string>();
       const sites = rawSites.filter((s) => { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
       const epoch = Math.floor(Date.now() / 1000);
-      const summaries: string[] = [];
 
+      // ── Phase 1: Fetch all data from every site (network only, no DB writes).
+      //    This is the slow part (multiple API calls per site).
+      const fetched: SiteFetchResult[] = [];
       for (const site of sites) {
         try {
-          await this.tickSite(site.id, site.name, epoch);
-          summaries.push(site.name);
+          const devices = await this.unifiApi.fetchDevices(site.id);
+          const aps = devices.filter((d) => d.features.includes('accessPoint'));
+          const clients = await this.unifiApi.fetchClients(site.id);
+          fetched.push({ siteId: site.id, siteName: site.name, aps, clients });
         } catch (err) {
-          console.error(`[poller] error on site "${site.name}":`, err);
+          console.error(`[poller] error fetching site "${site.name}":`, err);
         }
       }
 
-      // Prune snapshots older than 30 days
-      const cutoff = epoch - this.RETENTION_SECONDS;
+      // ── Phase 2: Write everything in a single transaction so the new epoch
+      //    is either fully visible or not visible at all.  This prevents the
+      //    frontend from seeing a half-populated epoch with zeros.
       const db = this.db.getKnex();
+      const summaries: string[] = [];
+
+      await db.transaction(async (trx) => {
+        for (const result of fetched) {
+          const summary = await this.writeSiteData(trx, result, epoch);
+          summaries.push(summary);
+        }
+      });
+
+      // ── Phase 3: Prune snapshots older than 30 days (outside the transaction)
+      const cutoff = epoch - this.RETENTION_SECONDS;
       const deletedSite = await db('site_snapshots').where('epoch', '<', cutoff).delete();
       const deletedAp = await db('ap_snapshots').where('epoch', '<', cutoff).delete();
       if (deletedSite + deletedAp > 0) {
@@ -58,15 +84,15 @@ export class PollerService {
     }
   }
 
-  private async tickSite(siteId: string, siteName: string, epoch: number): Promise<void> {
-    const db = this.db.getKnex();
-
-    // 1. Fetch devices, filter to APs, upsert access_points
-    const devices = await this.unifiApi.fetchDevices(siteId);
-    const aps = devices.filter((d) => d.features.includes('accessPoint'));
-
+  /** Write all DB rows for one site inside the caller's transaction. */
+  private async writeSiteData(
+    trx: Knex.Transaction,
+    { siteId, siteName, aps, clients }: SiteFetchResult,
+    epoch: number,
+  ): Promise<string> {
+    // 1. Upsert access_points
     for (const ap of aps) {
-      await db('access_points')
+      await trx('access_points')
         .insert({
           id: ap.id,
           mac_address: ap.macAddress,
@@ -81,8 +107,7 @@ export class PollerService {
         .merge(['mac_address', 'name', 'model', 'building', 'site_id', 'site_name', 'updated_at']);
     }
 
-    // 2. Fetch all clients, split by type
-    const clients = await this.unifiApi.fetchClients(siteId);
+    // 2. Build client count maps
     const wirelessById = new Map<string, number>();
     const wiredById = new Map<string, number>();
     for (const c of clients) {
@@ -101,13 +126,13 @@ export class PollerService {
       epoch,
     }));
     if (snapshots.length > 0) {
-      await db('ap_snapshots').insert(snapshots).onConflict(['ap_id', 'epoch']).ignore();
+      await trx('ap_snapshots').insert(snapshots).onConflict(['ap_id', 'epoch']).ignore();
     }
 
     // 4. Insert site_snapshot (time-series for history chart)
     const totalWireless = [...wirelessById.values()].reduce((a, b) => a + b, 0);
     const totalWired = [...wiredById.values()].reduce((a, b) => a + b, 0);
-    await db('site_snapshots').insert({
+    await trx('site_snapshots').insert({
       wireless_clients: totalWireless,
       wired_clients: totalWired,
       epoch,
@@ -115,6 +140,7 @@ export class PollerService {
     }).onConflict(['site_id', 'epoch']).ignore();
 
     console.log(`[poller]  ${siteName}: ${aps.length} APs, ${totalWireless} wireless + ${totalWired} wired clients`);
+    return `${siteName}: ${aps.length} APs, ${totalWireless} wireless + ${totalWired} wired clients`;
   }
 
   private getBuilding(name: string): string {
