@@ -116,6 +116,7 @@ export default function HistoryPage() {
   const playRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Data hooks ──
+  const rangeSeconds = to - from;
   const params: HistoryParams = { from, to, site_id: siteId || undefined };
   const { data, loading, error } = useHistory(params);
 
@@ -569,7 +570,7 @@ export default function HistoryPage() {
         ) : (
           <div className="space-y-4">
             <div className="rounded-xl p-2 sm:p-4 min-w-0" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-              <HistoryChart data={data} />
+              <HistoryChart data={data} rangeSeconds={rangeSeconds} />
             </div>
 
             {/* Collapsible data table */}

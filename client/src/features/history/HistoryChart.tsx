@@ -8,7 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
-import { formatEpoch, formatEpochFull } from '../../shared/utils/formatters';
+import { formatEpochFull } from '../../shared/utils/formatters';
 import type { HistoryPoint } from './types';
 
 interface ChartPoint {
@@ -20,6 +20,55 @@ interface ChartPoint {
 
 interface Props {
   data: HistoryPoint[];
+  /** Total seconds covered by the current range — used to pick tick format. */
+  rangeSeconds?: number;
+}
+
+/**
+ * Returns a tick formatter and suggested tick count appropriate for the range.
+ * Keeps X-axis labels short and non-overlapping on mobile.
+ */
+function getTickConfig(rangeSeconds: number): { formatter: (v: number) => string; tickCount: number } {
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  if (rangeSeconds <= 3600) {
+    // 1 h → show HH:MM, 6 ticks (every 10 min)
+    return {
+      formatter: (v) => {
+        const t = new Date(v * 1000);
+        return `${pad(t.getHours())}:${pad(t.getMinutes())}`;
+      },
+      tickCount: 6,
+    };
+  }
+  if (rangeSeconds <= 86400) {
+    // 6 h / 24 h → show HH:MM, 6 ticks
+    return {
+      formatter: (v) => {
+        const t = new Date(v * 1000);
+        return `${pad(t.getHours())}:${pad(t.getMinutes())}`;
+      },
+      tickCount: 6,
+    };
+  }
+  if (rangeSeconds <= 604800) {
+    // 7 d → show "Mon 14" style, 7 ticks
+    return {
+      formatter: (v) => {
+        const t = new Date(v * 1000);
+        return t.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+      },
+      tickCount: 7,
+    };
+  }
+  // 30 d → show "Apr 1" style, 6 ticks
+  return {
+    formatter: (v) => {
+      const t = new Date(v * 1000);
+      return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    },
+    tickCount: 6,
+  };
 }
 
 const MAX_POINTS = 36;
@@ -60,7 +109,7 @@ function downsample(points: ChartPoint[]): ChartPoint[] {
     }));
 }
 
-export default function HistoryChart({ data }: Props) {
+export default function HistoryChart({ data, rangeSeconds = 86400 }: Props) {
   if (data.length === 0) {
     return (
       <p className="text-sm py-12 text-center" style={{ color: 'var(--muted-foreground)' }}>
@@ -84,22 +133,30 @@ export default function HistoryChart({ data }: Props) {
     [chartData],
   );
 
+  const { formatter: tickFormatter, tickCount } = useMemo(
+    () => getTickConfig(rangeSeconds),
+    [rangeSeconds],
+  );
+
   return (
-    <ResponsiveContainer width="100%" height={350}>
-      <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+    <ResponsiveContainer width="100%" height={280}>
+      <LineChart data={chartData} margin={{ top: 6, right: 8, bottom: 4, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
         <XAxis
           dataKey="epoch"
           type="number"
           scale="time"
           domain={['dataMin', 'dataMax']}
-          tickFormatter={formatEpoch}
-          tick={{ fontSize: 11 }}
+          tickFormatter={tickFormatter}
+          tickCount={tickCount}
+          tick={{ fontSize: 10 }}
+          minTickGap={40}
         />
         <YAxis
           allowDecimals={false}
           domain={[0, yMax]}
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: 10 }}
+          width={38}
         />
         <Tooltip
           labelFormatter={(label) => formatEpochFull(Number(label))}

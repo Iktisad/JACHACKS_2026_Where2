@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { useHeatmap } from '../heatmap/useHeatmap';
 import { useHistory } from '../history/useHistory';
-import { formatEpoch, formatEpochFull } from '../../shared/utils/formatters';
+import { formatEpochFull } from '../../shared/utils/formatters';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import ErrorBanner from '../../shared/components/ErrorBanner';
 import type { ApRecord } from '../heatmap/types';
@@ -183,6 +183,23 @@ export default function AdminDashboard() {
         wired: Math.round(b.reduce((s, p) => s + p.wired, 0) / b.length),
       }));
   }, [historyData]);
+
+  /* Range-aware tick formatter for the trend chart */
+  const chartTickFormatter = useMemo(() => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    if (rangeSeconds <= 86400) {
+      // 1h / 6h / 24h → HH:MM
+      return (v: number) => {
+        const t = new Date(v * 1000);
+        return `${pad(t.getHours())}:${pad(t.getMinutes())}`;
+      };
+    }
+    // 7d → "Mon 14"
+    return (v: number) =>
+      new Date(v * 1000).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+  }, [rangeSeconds]);
+
+  const chartTickCount = rangeSeconds <= 3600 ? 6 : rangeSeconds <= 86400 ? 6 : 7;
 
   const chartYMax = useMemo(() => {
     const peak = Math.max(...chartData.map((d) => d.total), 0);
@@ -446,13 +463,13 @@ export default function AdminDashboard() {
               </div>
             </div>
             {historyLoading && chartData.length === 0 ? (
-              <div className="flex items-center justify-center h-[250px]"><LoadingSpinner /></div>
+              <div className="flex items-center justify-center h-[220px]"><LoadingSpinner /></div>
             ) : chartData.length === 0 ? (
-              <div className="flex items-center justify-center h-[250px] text-sm" style={{ color: 'var(--muted-foreground)' }}>
+              <div className="flex items-center justify-center h-[220px] text-sm" style={{ color: 'var(--muted-foreground)' }}>
                 No data for selected range
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                   <defs>
                     <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
@@ -461,8 +478,8 @@ export default function AdminDashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
-                  <XAxis dataKey="epoch" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={formatEpoch} tick={{ fontSize: 10 }} />
-                  <YAxis allowDecimals={false} domain={[0, chartYMax]} tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="epoch" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={chartTickFormatter} tickCount={chartTickCount} minTickGap={40} tick={{ fontSize: 10 }} />
+                  <YAxis allowDecimals={false} domain={[0, chartYMax]} tick={{ fontSize: 10 }} width={38} />
                   <Tooltip
                     content={({ payload, label }) => {
                       if (!payload || payload.length === 0) return null;
