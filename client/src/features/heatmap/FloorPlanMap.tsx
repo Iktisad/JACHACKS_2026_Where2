@@ -111,12 +111,32 @@ function computeRenderedAPs(
 // ─── Colour helper ────────────────────────────────────────────────────────────
 
 function getApColor(ap: ApRecord): string {
-  if (ap.status === "offline") return "#9ca3af";
   if (ap.clientCount === 0) return "#22c55e";
   if (ap.clientCount < 10) return "#84cc16";
   if (ap.clientCount < 20) return "#eab308";
   if (ap.clientCount < 30) return "#f97316";
   return "#ef4444";
+}
+
+// ─── Heatmap blob helpers ─────────────────────────────────────────────────────
+// These use a separate indigo palette so blobs don't clash with the dot colours.
+
+/** SVG-space radius of the radial gradient blob (30–120 px). */
+function getHeatRadius(clientCount: number): number {
+  if (clientCount === 0) return 30;
+  if (clientCount < 10) return 50;
+  if (clientCount < 20) return 75;
+  if (clientCount < 30) return 100;
+  return 120;
+}
+
+/** Peak opacity of the indigo heat blob (0.15–0.65). */
+function getHeatOpacity(clientCount: number): number {
+  if (clientCount === 0) return 0.15;
+  if (clientCount < 10) return 0.30;
+  if (clientCount < 20) return 0.45;
+  if (clientCount < 30) return 0.55;
+  return 0.65;
 }
 
 // Stable empty array — avoids spurious useMemo re-runs before real data arrives
@@ -125,11 +145,16 @@ const NO_APS: ApRecord[] = [];
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
-  /** Live AP records from useHeatmap(). Omit to show room anchors only. */
+  /** Live AP records from useHeatmap(). */
   liveAPs?: ApRecord[];
+  /**
+   * Whether the selected site has a floor plan available.
+   * Defaults to true. Pass false to show the "coming soon" overlay.
+   */
+  siteHasFloorPlan?: boolean;
 }
 
-export default function FloorPlanMap({ liveAPs = NO_APS }: Props) {
+export default function FloorPlanMap({ liveAPs = NO_APS, siteHasFloorPlan = true }: Props) {
   const [building, setBuilding] = useState<Building>("HE");
   const [level, setLevel] = useState<string>("0");
   // selectedRoom holds the "BUILDING-ROOM" key of the clicked room (e.g. "HE-052")
@@ -201,7 +226,7 @@ export default function FloorPlanMap({ liveAPs = NO_APS }: Props) {
         </label>
 
         <span className="ml-auto text-xs text-gray-400">
-          {floorRooms.length} rooms · {renderedAPs.length} APs loaded
+          {renderedAPs.length} APs active
         </span>
       </div>
 
@@ -213,50 +238,50 @@ export default function FloorPlanMap({ liveAPs = NO_APS }: Props) {
         <img
           src={floorSvg}
           alt={`${building} level ${level} floor plan`}
-          className="absolute inset-0 w-full h-full"
+          className={`absolute inset-0 w-full h-full${siteHasFloorPlan ? '' : ' opacity-25 grayscale'}`}
         />
+
+        {/* ── Coming-soon overlay for sites without floor plans ─────────────── */}
+        {!siteHasFloorPlan && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/60 rounded">
+            <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+            </svg>
+            <p className="text-sm font-medium text-gray-600">Floor plan not available for this site</p>
+            <p className="text-xs text-gray-400">Coming soon</p>
+          </div>
+        )}
 
         <svg
           viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
           className="absolute inset-0 w-full h-full pointer-events-none"
         >
-          {/*
-           * ── ROOM ANCHORS ─────────────────────────────────────────────────────
-           * A small blue crosshair (+) is rendered at the centre of every room
-           * on this floor. Coordinates come from room-coordinates.json.
-           *
-           * These anchors serve two purposes:
-           *   1. Visual reference while no live AP data is loaded.
-           *   2. The base position used by computeRenderedAPs() — when real AP
-           *      data arrives, AP dots are placed here (offset horizontally when
-           *      multiple APs share the same room).
-           * ─────────────────────────────────────────────────────────────────────
-           */}
-          {floorRooms.map((room) => (
-            <g key={room.id}>
-              {/* Crosshair arm — horizontal */}
-              <line
-                x1={room.x - 5} y1={room.y}
-                x2={room.x + 5} y2={room.y}
-                stroke="#93c5fd" strokeWidth={1.5}
-              />
-              {/* Crosshair arm — vertical */}
-              <line
-                x1={room.x} y1={room.y - 5}
-                x2={room.x} y2={room.y + 5}
-                stroke="#93c5fd" strokeWidth={1.5}
-              />
-              {/* Room number label */}
-              <text
-                x={room.x + 7}
-                y={room.y - 4}
-                fontSize={7}
-                fill="#60a5fa"
-                className="pointer-events-none font-mono"
+          {/* ── GRADIENT DEFINITIONS (one per rendered AP) ───────────────── */}
+          <defs>
+            {renderedAPs.map((ap) => (
+              <radialGradient
+                key={`grad-${ap.building}-${ap.room}-${ap.apId}`}
+                id={`grad-${ap.building}-${ap.room}-${ap.apId}`}
+                gradientUnits="userSpaceOnUse"
+                cx={ap.renderX}
+                cy={ap.renderY}
+                r={getHeatRadius(ap.clientCount)}
               >
-                {room.room}
-              </text>
-            </g>
+                <stop offset="0%" stopColor="#6366f1" stopOpacity={getHeatOpacity(ap.clientCount)} />
+                <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+              </radialGradient>
+            ))}
+          </defs>
+
+          {/* ── HEATMAP BLOBS (rendered before dots so dots appear on top) ── */}
+          {renderedAPs.map((ap) => (
+            <circle
+              key={`blob-${ap.building}-${ap.room}-${ap.apId}`}
+              cx={ap.renderX}
+              cy={ap.renderY}
+              r={getHeatRadius(ap.clientCount)}
+              fill={`url(#grad-${ap.building}-${ap.room}-${ap.apId})`}
+            />
           ))}
 
           {/*
@@ -281,13 +306,11 @@ export default function FloorPlanMap({ liveAPs = NO_APS }: Props) {
                 className="pointer-events-auto cursor-pointer"
                 onClick={() => setSelectedRoom(isSelected ? null : roomKey)}
               >
-                {/* Pulse ring — online APs only */}
-                {ap.status === "online" && (
-                  <circle cx={ap.renderX} cy={ap.renderY} r={10} fill={getApColor(ap)} opacity={0.25}>
-                    <animate attributeName="r" from="8" to="16" dur="1.5s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite" />
-                  </circle>
-                )}
+                {/* Pulse ring */}
+                <circle cx={ap.renderX} cy={ap.renderY} r={10} fill={getApColor(ap)} opacity={0.25}>
+                  <animate attributeName="r" from="8" to="16" dur="1.5s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite" />
+                </circle>
                 {/* Main dot */}
                 <circle
                   cx={ap.renderX}
@@ -342,11 +365,7 @@ export default function FloorPlanMap({ liveAPs = NO_APS }: Props) {
                     style={{ '--ap-color': getApColor(ap) } as React.CSSProperties}
                   />
                   <span className="text-xs text-gray-600">
-                    AP {ap.apId} ·{" "}
-                    <span className={ap.status === "online" ? "text-green-600" : "text-gray-400"}>
-                      {ap.status}
-                    </span>
-                    {ap.status === "online" && ` · ${ap.clientCount} clients`}
+                    AP {ap.apId} · {ap.clientCount} wireless · {ap.wiredCount} wired
                   </span>
                 </div>
               ))
@@ -359,15 +378,14 @@ export default function FloorPlanMap({ liveAPs = NO_APS }: Props) {
       </div>
 
       {/* ── Legend ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-4 px-1 text-xs text-gray-600">
-        <span className="font-medium">Clients:</span>
+      <div className="flex flex-wrap items-center gap-4 px-1 text-xs text-gray-600">
+        <span className="font-medium">AP clients:</span>
         {[
           { color: "#22c55e", label: "0" },
           { color: "#84cc16", label: "1-9" },
           { color: "#eab308", label: "10-19" },
           { color: "#f97316", label: "20-29" },
           { color: "#ef4444", label: "30+" },
-          { color: "#9ca3af", label: "Offline" },
         ].map((item) => (
           <span key={item.label} className="flex items-center gap-1">
             <span
@@ -377,7 +395,10 @@ export default function FloorPlanMap({ liveAPs = NO_APS }: Props) {
             {item.label}
           </span>
         ))}
-        <span className="ml-auto text-xs text-blue-400 font-mono">+ room anchor</span>
+        <span className="flex items-center gap-1 ml-4">
+          <span className="inline-block w-4 h-4 rounded-full opacity-50 bg-indigo-500" />
+          Heat intensity
+        </span>
       </div>
     </div>
   );

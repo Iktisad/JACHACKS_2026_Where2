@@ -6,6 +6,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
 } from 'recharts';
 import { formatEpoch, formatEpochFull } from '../../shared/utils/formatters';
 import type { HistoryPoint } from './types';
@@ -23,6 +24,8 @@ export default function HistoryChart({ data }: Props) {
     );
   }
 
+  const hasWired = data.some((d) => d.wired_client_count !== undefined);
+
   return (
     <ResponsiveContainer width="100%" height={350}>
       <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
@@ -39,15 +42,30 @@ export default function HistoryChart({ data }: Props) {
         />
         <Tooltip
           labelFormatter={(label) => formatEpochFull(Number(label))}
-          formatter={(value: number) => [value, 'Clients']}
+          formatter={(value: number, name: string) => [
+            value,
+            name === 'client_count' ? 'Wireless' : 'Wired',
+          ]}
         />
+        {hasWired && <Legend formatter={(v) => v === 'client_count' ? 'Wireless' : 'Wired'} />}
         <Line
           type="monotone"
           dataKey="client_count"
+          name="client_count"
           stroke="#2563eb"
           dot={false}
           strokeWidth={2}
         />
+        {hasWired && (
+          <Line
+            type="monotone"
+            dataKey="wired_client_count"
+            name="wired_client_count"
+            stroke="#7c3aed"
+            dot={false}
+            strokeWidth={2}
+          />
+        )}
       </LineChart>
     </ResponsiveContainer>
   );

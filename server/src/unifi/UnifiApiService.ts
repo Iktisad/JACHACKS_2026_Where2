@@ -46,7 +46,7 @@ export class UnifiApiService {
     return results;
   }
 
-  async fetchWirelessClients(siteId: string): Promise<UnifiClient[]> {
+  async fetchClients(siteId: string): Promise<UnifiClient[]> {
     const results: UnifiClient[] = [];
     const limit = 200;
     let offset = 0;
@@ -55,8 +55,7 @@ export class UnifiApiService {
       const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
       const url = `${this.baseUrl}/sites/${siteId}/clients?${params}`;
       const page = await this.getPage<UnifiClient>(url);
-      const wireless = page.data.filter((c) => c.type === 'WIRELESS');
-      results.push(...wireless);
+      results.push(...page.data);
       offset += page.count;
       if (offset >= page.totalCount || page.count === 0) break;
     }

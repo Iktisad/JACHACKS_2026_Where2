@@ -6,6 +6,7 @@ export interface HeatmapAP {
   map_x: number | null;
   map_y: number | null;
   client_count: number;
+  wired_client_count: number;
 }
 
 /**
@@ -19,6 +20,7 @@ export interface ApRecord {
   building: string;  // "HE" | "LI"
   apId: string;      // unique AP id within the room, e.g. "001"
   clientCount: number;
+  wiredCount: number;
   status: 'online' | 'offline';
 }
 

@@ -33,6 +33,7 @@ export class HeatmapController {
           'ap.map_x',
           'ap.map_y',
           db.raw('COALESCE(s.client_count, 0) as client_count'),
+          db.raw('COALESCE(s.wired_client_count, 0) as wired_client_count'),
         );
       if (siteId) q = q.where('ap.site_id', siteId);
       res.json(await q);

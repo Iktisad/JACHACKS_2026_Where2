@@ -41,13 +41,17 @@ export default function HistoryPage() {
   const params: HistoryParams = { from, to, ap_id: apId || undefined, site_id: siteId || undefined };
   const { data, loading, error } = useHistory(params);
 
-  const latestCount = data.at(-1)?.client_count ?? 0;
+  const latestWireless = data.at(-1)?.client_count ?? 0;
+  const latestWired = data.at(-1)?.wired_client_count ?? 0;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <h1 className="text-2xl font-semibold text-gray-900">Client History</h1>
-        <StatCard label="Active Clients" value={latestCount} />
+        <div className="flex gap-3">
+          <StatCard label="Wireless Clients" value={latestWireless} />
+          <StatCard label="Wired Clients" value={latestWired} />
+        </div>
       </div>
 
       {/* Filters */}

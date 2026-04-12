@@ -31,7 +31,7 @@ export class HistoryController {
 
       if (apId) {
         const rows = await db('ap_snapshots')
-          .select('epoch', 'client_count')
+          .select('epoch', 'client_count', 'wired_client_count')
           .where('ap_id', apId)
           .whereBetween('epoch', [from, to])
           .orderBy('epoch', 'asc')
@@ -39,7 +39,12 @@ export class HistoryController {
         res.json(rows);
       } else {
         let q = db('site_snapshots')
-          .select('epoch', 'total_clients as client_count')
+          .select(
+            'epoch',
+            'total_clients as client_count',
+            'wireless_clients',
+            db.raw('wired_clients as wired_client_count'),
+          )
           .whereBetween('epoch', [from, to])
           .orderBy('epoch', 'asc')
           .limit(2016);

@@ -21,7 +21,7 @@ if (aps.length > 0) {
 }
 
 console.log('\n--- Wireless Clients ---');
-const clients = await api.fetchWirelessClients(siteId);
+const clients = await api.fetchClients(siteId);
 console.log(`Wireless clients: ${clients.length}`);
 if (clients.length > 0) {
   const sample = clients[0]!;

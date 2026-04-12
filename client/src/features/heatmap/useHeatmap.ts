@@ -30,6 +30,7 @@ function toApRecord(ap: HeatmapAP): ApRecord | null {
     building: parsed.building,
     apId: parsed.apId,
     clientCount: ap.client_count,
+    wiredCount: ap.wired_client_count,
     // All APs returned by the API are considered online
     // (the DB only stores APs the poller has seen)
     status: 'online',
@@ -38,7 +39,8 @@ function toApRecord(ap: HeatmapAP): ApRecord | null {
 
 interface UseHeatmapResult {
   aps: ApRecord[];
-  totalClients: number;
+  totalWireless: number;
+  totalWired: number;
   loading: boolean;
   error: string | null;
   lastUpdated: number | null;
@@ -46,7 +48,8 @@ interface UseHeatmapResult {
 
 export function useHeatmap(siteId?: string): UseHeatmapResult {
   const [aps, setAps] = useState<ApRecord[]>([]);
-  const [totalClients, setTotalClients] = useState(0);
+  const [totalWireless, setTotalWireless] = useState(0);
+  const [totalWired, setTotalWired] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
@@ -59,7 +62,8 @@ export function useHeatmap(siteId?: string): UseHeatmapResult {
           return record ? [record] : [];
         });
         setAps(records);
-        setTotalClients(data.reduce((sum, ap) => sum + ap.client_count, 0));
+        setTotalWireless(data.reduce((sum, ap) => sum + ap.client_count, 0));
+        setTotalWired(data.reduce((sum, ap) => sum + ap.wired_client_count, 0));
         setError(null);
         setLastUpdated(Math.floor(Date.now() / 1000));
       })
@@ -70,6 +74,6 @@ export function useHeatmap(siteId?: string): UseHeatmapResult {
   // Immediate fetch on mount + poll every 30 seconds
   usePolling(load, THIRTY_SECONDS);
 
-  return { aps, totalClients, loading, error, lastUpdated };
+  return { aps, totalWireless, totalWired, loading, error, lastUpdated };
 }
 

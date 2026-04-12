@@ -68,31 +68,40 @@ export class PollerService {
         .merge(['mac_address', 'name', 'model', 'building', 'site_id', 'site_name', 'updated_at']);
     }
 
-    // 2. Fetch wireless clients, group by uplinkDeviceId
-    const clients = await this.unifiApi.fetchWirelessClients(siteId);
-    const countById = new Map<string, number>();
+    // 2. Fetch all clients, split by type
+    const clients = await this.unifiApi.fetchClients(siteId);
+    const wirelessById = new Map<string, number>();
+    const wiredById = new Map<string, number>();
     for (const c of clients) {
-      countById.set(c.uplinkDeviceId, (countById.get(c.uplinkDeviceId) ?? 0) + 1);
+      if (c.type === 'WIRELESS') {
+        wirelessById.set(c.uplinkDeviceId, (wirelessById.get(c.uplinkDeviceId) ?? 0) + 1);
+      } else {
+        wiredById.set(c.uplinkDeviceId, (wiredById.get(c.uplinkDeviceId) ?? 0) + 1);
+      }
     }
 
-    // 3. Bulk insert ap_snapshots
+    // 3. Bulk insert ap_snapshots (client_count = wireless only, for historical compat)
     const snapshots = aps.map((ap) => ({
       ap_id: ap.id,
-      client_count: countById.get(ap.id) ?? 0,
+      client_count: wirelessById.get(ap.id) ?? 0,
+      wired_client_count: wiredById.get(ap.id) ?? 0,
       epoch,
     }));
     if (snapshots.length > 0) await db('ap_snapshots').insert(snapshots);
 
     // 4. Insert site_snapshot
-    const totalClients = [...countById.values()].reduce((a, b) => a + b, 0);
+    const totalWireless = [...wirelessById.values()].reduce((a, b) => a + b, 0);
+    const totalWired = [...wiredById.values()].reduce((a, b) => a + b, 0);
     await db('site_snapshots').insert({
-      total_clients: totalClients,
+      total_clients: totalWireless + totalWired,
+      wireless_clients: totalWireless,
+      wired_clients: totalWired,
       epoch,
       site_id: siteId,
       site_name: siteName,
     });
 
-    console.log(`[poller]  ${siteName}: ${aps.length} APs, ${totalClients} wireless clients`);
+    console.log(`[poller]  ${siteName}: ${aps.length} APs, ${totalWireless} wireless + ${totalWired} wired clients`);
   }
 
   private getBuilding(name: string): string {
