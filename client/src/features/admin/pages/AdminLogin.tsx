@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export function AdminLogin() {
   const { login } = useAdminAuth();
@@ -45,15 +46,18 @@ export function AdminLogin() {
           animate={{ opacity: 1, y: 0 }}
           className="relative max-w-sm mx-auto"
         >
-          <Link
-            to="/"
-            className="mb-5 inline-flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors"
-          >
+          <div className="flex items-center justify-between mb-5">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors"
+            >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
-            Back to role select
-          </Link>
+              Back to role select
+            </Link>
+            <ThemeToggle variant="dark" />
+          </div>
 
           <div className="flex items-center gap-3 mb-4">
             <div
@@ -215,11 +219,7 @@ export function AdminLogin() {
           className="mt-4 flex items-center justify-center gap-1 text-[13px]"
           style={{ color: 'var(--muted-foreground)' }}
         >
-          <Link to="/" className="font-semibold hover:underline underline-offset-2" style={{ color: 'var(--primary)' }}>
-            ← Home
-          </Link>
-          <span className="mx-2" style={{ color: 'var(--border)' }}>·</span>
-          <Link to="/student" className="font-semibold hover:underline underline-offset-2" style={{ color: 'var(--primary)' }}>
+          <Link to="/student/login" className="font-semibold hover:underline underline-offset-2" style={{ color: 'var(--primary)' }}>
             Switch to Student
           </Link>
         </motion.div>

@@ -299,10 +299,10 @@ export default function RoleSelectPage() {
       {/* ── Logo footer ───────────────────────────────────────── */}
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30">
         <img
-          src="/icons/app logo.svg"
+          src="/icons/web logo.svg"
           alt="WhereTo"
-          className="h-8 w-auto object-contain"
-          style={{ opacity: 0.55 }}
+          className="h-30 w-auto object-contain"
+          style={{ opacity: 0.45 }}
         />
       </div>
     </div>

@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Flame, History, LogOut } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { ThemeToggle } from './ThemeToggle';
 
 const navItems = [
   { path: '/admin',         icon: LayoutDashboard, label: 'Dashboard' },
@@ -84,6 +85,14 @@ export function AdminBottomNav() {
             </Link>
           );
         })}
+
+        {/* Theme toggle */}
+        <div className="relative flex flex-col items-center justify-center flex-1 h-full gap-1">
+          <ThemeToggle />
+          <span className="text-[10px] leading-none font-medium" style={{ color: 'var(--muted-foreground)' }}>
+            Theme
+          </span>
+        </div>
 
         {/* Logout button */}
         <motion.button

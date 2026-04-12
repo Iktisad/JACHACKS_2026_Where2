@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Sun, Moon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 
 export function Login() {
-  const { login } = useAuth();
+  const { login, preferences, savePreferences } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -39,9 +39,27 @@ export function Login() {
           animate={{ opacity: 1, y: 0 }}
           className="relative max-w-sm mx-auto"
         >
-          <Link to="/" className="mb-5 block max-w-60 shrink-0 leading-none outline-none">
-            <img src="/icons/web logo.svg" alt="Whereto" className="block w-full h-auto object-contain object-left" />
-          </Link>
+          <div className="flex items-center justify-between mb-5">
+            <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 5l-7 7 7 7" />
+              </svg>
+              Back to role select
+            </Link>
+            <button
+              type="button"
+              onClick={() => savePreferences({ ...preferences, darkMode: !preferences.darkMode })}
+              title={preferences.darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="flex items-center justify-center rounded-xl transition-colors"
+              style={{ width: 32, height: 32, background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.15)' }}
+            >
+              {preferences.darkMode
+                ? <Sun className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.80)' }} strokeWidth={1.8} />
+                : <Moon className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.80)' }} strokeWidth={1.8} />
+              }
+            </button>
+          </div>
+
           <h1 className="text-[26px] font-semibold text-white tracking-tight leading-snug">
             Welcome back
           </h1>
@@ -161,10 +179,6 @@ export function Login() {
           className="mt-4 flex items-center justify-center gap-1 text-[13px]"
           style={{ color: 'var(--muted-foreground)' }}
         >
-          <Link to="/" className="font-semibold hover:underline underline-offset-2" style={{ color: 'var(--primary)' }}>
-            ← Home
-          </Link>
-          <span className="mx-2" style={{ color: 'var(--border)' }}>·</span>
           <Link to="/admin/login" className="font-semibold hover:underline underline-offset-2" style={{ color: 'var(--primary)' }}>
             Switch to Admin
           </Link>

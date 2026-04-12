@@ -18,6 +18,8 @@ interface AdminAuthContextValue {
   admin: AdminProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -25,7 +27,8 @@ interface AdminAuthContextValue {
 // ── Hardcoded admin credentials (localStorage-backed) ──────────
 // In a real app this would be a proper backend check.
 
-const ADMIN_KEY = 'whereto_admin';
+const ADMIN_KEY      = 'whereto_admin';
+const ADMIN_DARK_KEY = 'whereto_admin_dark';
 
 const ADMINS: Record<string, { name: string; password: string }> = {
   'admin@johnabbott.qc.ca': { name: 'ITS Admin', password: 'admin123' },
@@ -51,10 +54,26 @@ const AdminAuthContext = createContext<AdminAuthContextValue | null>(null);
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<AdminProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [darkMode, setDarkMode] = useState(() =>
+    localStorage.getItem(ADMIN_DARK_KEY) === 'true'
+  );
+
+  // Sync dark class on <html> whenever darkMode changes
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     setAdmin(loadAdmin());
     setIsLoading(false);
+  }, []);
+
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode((prev) => {
+      const next = !prev;
+      localStorage.setItem(ADMIN_DARK_KEY, String(next));
+      return next;
+    });
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -73,7 +92,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AdminAuthContext.Provider value={{ admin, isLoading, isAuthenticated: !!admin, login, logout }}>
+    <AdminAuthContext.Provider value={{ admin, isLoading, isAuthenticated: !!admin, darkMode, toggleDarkMode, login, logout }}>
       {children}
     </AdminAuthContext.Provider>
   );

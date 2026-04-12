@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Flame, History, ArrowLeftRight, LogOut } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { ThemeToggle } from './ThemeToggle';
 
 const navItems = [
   { path: '/admin',         icon: LayoutDashboard, label: 'Dashboard'    },
@@ -107,7 +108,8 @@ export function AdminSidebar() {
               >
                 {admin.name.charAt(0)}
               </div>
-              <span className="truncate">{admin.name}</span>
+              <span className="truncate flex-1">{admin.name}</span>
+              <ThemeToggle />
             </div>
           )}
           <button
