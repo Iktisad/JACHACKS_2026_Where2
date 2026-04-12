@@ -8,6 +8,7 @@ import type { SitesController } from './routes/SitesController.js';
 import type { DevicesController } from './routes/DevicesController.js';
 import type { HistoryController } from './routes/HistoryController.js';
 import type { HeatmapController } from './routes/HeatmapController.js';
+import type { AiController } from './routes/AiController.js';
 
 export class App {
   private readonly express: Application;
@@ -20,6 +21,7 @@ export class App {
     private readonly devicesController: DevicesController,
     private readonly historyController: HistoryController,
     private readonly heatmapController: HeatmapController,
+    private readonly aiController: AiController,
   ) {
     this.express = express();
     this.applyMiddleware();
@@ -42,6 +44,7 @@ export class App {
     this.express.use('/api/devices', this.devicesController.router);
     this.express.use('/api/history', this.historyController.router);
     this.express.use('/api/heatmap', this.heatmapController.router);
+    this.express.use('/api/ai', this.aiController.router);
   }
 
   private registerErrorHandler(): void {

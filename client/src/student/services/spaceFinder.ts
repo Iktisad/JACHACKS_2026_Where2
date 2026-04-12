@@ -1,7 +1,9 @@
 /**
- * Client-side space matching. Replace the async body with a Gemini API call
- * when `VITE_GEMINI_API_KEY` (or your backend) is available.
+ * Space matching via Gemini AI (server-side Vertex AI).
+ * Falls back to local scoring if the API call fails.
  */
+
+import { suggestSpace as apiSuggestSpace } from '../../api/ai.js';
 
 export type FinderSpace = {
   id: number;
@@ -65,9 +67,20 @@ export async function runSpaceFinder(
   criteria: SpaceFinderCriteria,
   spaces: FinderSpace[]
 ): Promise<SpaceFinderResult> {
-  await new Promise((r) => setTimeout(r, 700));
+  try {
+    const result = await apiSuggestSpace(criteria);
+    return result;
+  } catch (err) {
+    console.warn('[spaceFinder] AI API unavailable, falling back to local scoring:', err);
+    return localFallback(criteria, spaces);
+  }
+}
 
-  let best = spaces[0];
+function localFallback(
+  criteria: SpaceFinderCriteria,
+  spaces: FinderSpace[]
+): SpaceFinderResult {
+  let best = spaces[0]!;
   let bestScore = -1;
   for (const space of spaces) {
     const s = scoreSpace(space, criteria);
@@ -78,16 +91,16 @@ export async function runSpaceFinder(
   }
 
   const envLabel =
-    criteria.environment === "silent"
-      ? "a silent focus block"
-      : criteria.environment === "quiet"
-        ? "quiet reading or light work"
-        : "collaborative work";
+    criteria.environment === 'silent'
+      ? 'a silent focus block'
+      : criteria.environment === 'quiet'
+        ? 'quiet reading or light work'
+        : 'collaborative work';
 
   const buildingNote =
-    criteria.building === "all" ? "across campus" : `in ${criteria.building}`;
+    criteria.building === 'all' ? 'across campus' : `in ${criteria.building}`;
 
-  const insight = `Matched for ${envLabel} ${buildingNote}. We prioritized availability, noise level, and amenities for your ${criteria.duration === "long" ? "longer" : criteria.duration === "short" ? "short" : "mid-length"} session.`;
+  const insight = `Matched for ${envLabel} ${buildingNote}. We prioritized availability, noise level, and amenities for your ${criteria.duration === 'long' ? 'longer' : criteria.duration === 'short' ? 'short' : 'mid-length'} session.`;
 
   return { space: best, insight };
 }
