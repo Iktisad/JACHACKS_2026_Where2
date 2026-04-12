@@ -43,6 +43,7 @@ export default function HistoryPage() {
 
   const latestWireless = data.at(-1)?.client_count ?? 0;
   const latestWired = data.at(-1)?.wired_client_count ?? 0;
+  const [tableOpen, setTableOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -114,7 +115,23 @@ export default function HistoryPage() {
           <div className="bg-white border rounded-lg p-4">
             <HistoryChart data={data} />
           </div>
-          <HistoryTable data={data} />
+
+          {/* Collapsible data table */}
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              onClick={() => setTableOpen((v) => !v)}
+            >
+              <span>Data Table ({data.length} points)</span>
+              <svg
+                className={`w-4 h-4 text-gray-400 transition-transform${tableOpen ? ' rotate-180' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {tableOpen && <HistoryTable data={data} />}
+          </div>
         </div>
       )}
     </div>

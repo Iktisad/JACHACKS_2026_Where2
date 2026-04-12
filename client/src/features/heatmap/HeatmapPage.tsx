@@ -16,7 +16,17 @@ export default function HeatmapPage() {
   // Floor plans are only available for JAC Campus buildings (HE / LI).
   // Regex matches against the site name returned by UniFi.
   const JAC_PATTERN = /jac|herzberg|library|john\s*abbott/i;
-  const siteHasFloorPlan = !siteId || JAC_PATTERN.test(selectedSite?.name ?? '');
+  const isJac = siteId !== '' && JAC_PATTERN.test(selectedSite?.name ?? '');
+  const siteHasFloorPlan = siteId === '' || isJac;
+
+  // Buildings available in the dropdown depend on the selected site:
+  //   All Sites → blank + HE + LI
+  //   JAC Campus → HE + LI (no blank)
+  //   Other site → blank only (no floor plans)
+  const availableBuildings: Array<'HE' | 'LI' | ''> =
+    siteId === '' ? ['', 'HE', 'LI'] :
+    isJac ? ['HE', 'LI'] :
+    [''];
 
   return (
     <div className="space-y-6">
@@ -49,7 +59,11 @@ export default function HeatmapPage() {
       {loading && aps.length === 0 ? (
         <LoadingSpinner />
       ) : (
-        <FloorPlanMap liveAPs={aps} siteHasFloorPlan={siteHasFloorPlan} />
+        <FloorPlanMap
+          liveAPs={siteHasFloorPlan ? aps : []}
+          siteHasFloorPlan={siteHasFloorPlan}
+          availableBuildings={availableBuildings}
+        />
       )}
 
       {lastUpdated && (

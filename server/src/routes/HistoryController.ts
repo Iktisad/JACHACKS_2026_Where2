@@ -41,8 +41,7 @@ export class HistoryController {
         let q = db('site_snapshots')
           .select(
             'epoch',
-            'total_clients as client_count',
-            'wireless_clients',
+            'wireless_clients as client_count',
             db.raw('wired_clients as wired_client_count'),
           )
           .whereBetween('epoch', [from, to])

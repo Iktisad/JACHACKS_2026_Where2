@@ -73,8 +73,8 @@ for (const { file, building, level } of SVG_FILES) {
 
     if (!matchesLevel(room, level)) continue;
     if (isNaN(x) || isNaN(y)) continue;
-    // Must be within the 1056×816 SVG canvas
-    if (x < 0 || x > 1056 || y < 0 || y > 816) continue;
+    // Must be within the usable 1056×695 SVG canvas (below 695 = title block)
+    if (x < 0 || x > 1056 || y < 0 || y > 695) continue;
 
     const dedupKey = `${building}-${level}-${room}`;
     if (seen.has(dedupKey)) continue;

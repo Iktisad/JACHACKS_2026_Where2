@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 // ─── Floor plan SVG assets ────────────────────────────────────────────────────
 // All 10 floor plans imported eagerly so Vite bundles them correctly.
@@ -25,9 +25,10 @@ const SVG_HEIGHT = 816;
 
 // ─── Building / level config ──────────────────────────────────────────────────
 
-type Building = "HE" | "LI";
+/** "" = no building selected (placeholder state) */
+type Building = "HE" | "LI" | "";
 
-const LEVELS: Record<Building, string[]> = {
+const LEVELS: Record<"HE" | "LI", string[]> = {
   HE: ["0", "1", "2", "3", "4"],
   LI: ["M", "0", "1", "2", "3"],
 };
@@ -119,24 +120,24 @@ function getApColor(ap: ApRecord): string {
 }
 
 // ─── Heatmap blob helpers ─────────────────────────────────────────────────────
-// These use a separate indigo palette so blobs don't clash with the dot colours.
+// Blobs use the same green→yellow→red palette as the AP dots.
 
-/** SVG-space radius of the radial gradient blob (30–120 px). */
+/** SVG-space radius of the radial gradient blob (60–200 px). */
 function getHeatRadius(clientCount: number): number {
-  if (clientCount === 0) return 30;
-  if (clientCount < 10) return 50;
-  if (clientCount < 20) return 75;
-  if (clientCount < 30) return 100;
-  return 120;
+  if (clientCount === 0) return 60;
+  if (clientCount < 10) return 90;
+  if (clientCount < 20) return 120;
+  if (clientCount < 30) return 160;
+  return 200;
 }
 
-/** Peak opacity of the indigo heat blob (0.15–0.65). */
+/** Peak opacity of the heat blob (0.20–0.70). */
 function getHeatOpacity(clientCount: number): number {
-  if (clientCount === 0) return 0.15;
-  if (clientCount < 10) return 0.30;
-  if (clientCount < 20) return 0.45;
-  if (clientCount < 30) return 0.55;
-  return 0.65;
+  if (clientCount === 0) return 0.20;
+  if (clientCount < 10) return 0.35;
+  if (clientCount < 20) return 0.50;
+  if (clientCount < 30) return 0.60;
+  return 0.70;
 }
 
 // Stable empty array — avoids spurious useMemo re-runs before real data arrives
@@ -152,17 +153,39 @@ interface Props {
    * Defaults to true. Pass false to show the "coming soon" overlay.
    */
   siteHasFloorPlan?: boolean;
+  /**
+   * Controls which building options appear in the dropdown.
+   * '' = blank/placeholder option; 'HE' | 'LI' = real buildings.
+   * Defaults to ['HE', 'LI'].
+   */
+  availableBuildings?: Array<Building>;
 }
 
-export default function FloorPlanMap({ liveAPs = NO_APS, siteHasFloorPlan = true }: Props) {
-  const [building, setBuilding] = useState<Building>("HE");
-  const [level, setLevel] = useState<string>("0");
+export default function FloorPlanMap({
+  liveAPs = NO_APS,
+  siteHasFloorPlan = true,
+  availableBuildings = ['HE', 'LI'],
+}: Props) {
+  const [building, setBuilding] = useState<Building>(availableBuildings[0] ?? 'HE');
+  const [level, setLevel] = useState<string>(
+    availableBuildings[0] && availableBuildings[0] !== '' ? LEVELS[availableBuildings[0] as 'HE' | 'LI'][0] : ''
+  );
   // selectedRoom holds the "BUILDING-ROOM" key of the clicked room (e.g. "HE-052")
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
 
+  // When the parent changes which buildings are available (e.g. site selection changes),
+  // reset to the first available building automatically.
+  useEffect(() => {
+    const first = availableBuildings[0] ?? '';
+    setBuilding(first);
+    setLevel(first !== '' ? LEVELS[first as 'HE' | 'LI'][0] : '');
+    setSelectedRoom(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableBuildings.join(',')]);
+
   function handleBuildingChange(b: Building) {
     setBuilding(b);
-    setLevel(LEVELS[b][0]); // reset to first floor of new building
+    setLevel(b !== '' ? LEVELS[b as 'HE' | 'LI'][0] : '');
     setSelectedRoom(null);
   }
 
@@ -191,7 +214,7 @@ export default function FloorPlanMap({ liveAPs = NO_APS, siteHasFloorPlan = true
     : [];
 
   const selectedAnchor = selectedRoom ? coordsByRoomKey.get(selectedRoom) : null;
-  const floorSvg = FLOOR_PLAN_SVG[`${building}-${level}`];
+  const floorSvg = building !== '' ? FLOOR_PLAN_SVG[`${building}-${level}`] : undefined;
 
   return (
     <div className="w-full overflow-auto border rounded-lg bg-white p-3 space-y-3">
@@ -205,25 +228,34 @@ export default function FloorPlanMap({ liveAPs = NO_APS, siteHasFloorPlan = true
             value={building}
             onChange={(e) => handleBuildingChange(e.target.value as Building)}
           >
-            <option value="HE">HE — Herzberg</option>
-            <option value="LI">LI — Library</option>
+            {availableBuildings.includes('') && (
+              <option value="">— Select building —</option>
+            )}
+            {availableBuildings.includes('HE') && (
+              <option value="HE">HE — Herzberg</option>
+            )}
+            {availableBuildings.includes('LI') && (
+              <option value="LI">LI — Library</option>
+            )}
           </select>
         </label>
 
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-          Level
-          <select
-            className="ml-1 border border-gray-300 rounded px-2 py-1 text-sm"
-            value={level}
-            onChange={(e) => { setLevel(e.target.value); setSelectedRoom(null); }}
-          >
-            {LEVELS[building].map((l) => (
-              <option key={l} value={l}>
-                {l === "M" ? "Mezzanine" : `Floor ${l}`}
-              </option>
-            ))}
-          </select>
-        </label>
+        {building !== '' && (
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            Level
+            <select
+              className="ml-1 border border-gray-300 rounded px-2 py-1 text-sm"
+              value={level}
+              onChange={(e) => { setLevel(e.target.value); setSelectedRoom(null); }}
+            >
+              {LEVELS[building as 'HE' | 'LI'].map((l) => (
+                <option key={l} value={l}>
+                  {l === "M" ? "Mezzanine" : `Floor ${l}`}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <span className="ml-auto text-xs text-gray-400">
           {renderedAPs.length} APs active
@@ -234,15 +266,27 @@ export default function FloorPlanMap({ liveAPs = NO_APS, siteHasFloorPlan = true
       <div
         className="relative w-full aspect-1056/816"
       >
-        {/* Floor plan background */}
-        <img
-          src={floorSvg}
-          alt={`${building} level ${level} floor plan`}
-          className={`absolute inset-0 w-full h-full${siteHasFloorPlan ? '' : ' opacity-25 grayscale'}`}
-        />
+        {/* ── No building selected: placeholder panel ──────────────────────── */}
+        {building === '' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-50 rounded border border-dashed border-gray-300">
+            <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5M3.75 3v18m16.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+            </svg>
+            <p className="text-sm text-gray-500">Select a building to view the floor plan</p>
+          </div>
+        )}
+
+        {/* Floor plan background — only when a building is selected */}
+        {building !== '' && floorSvg && (
+          <img
+            src={floorSvg}
+            alt={`${building} level ${level} floor plan`}
+            className={`absolute inset-0 w-full h-full${siteHasFloorPlan ? '' : ' opacity-25 grayscale'}`}
+          />
+        )}
 
         {/* ── Coming-soon overlay for sites without floor plans ─────────────── */}
-        {!siteHasFloorPlan && (
+        {building !== '' && !siteHasFloorPlan && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/60 rounded">
             <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
@@ -252,6 +296,7 @@ export default function FloorPlanMap({ liveAPs = NO_APS, siteHasFloorPlan = true
           </div>
         )}
 
+        {building !== '' && (
         <svg
           viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
           className="absolute inset-0 w-full h-full pointer-events-none"
@@ -267,8 +312,8 @@ export default function FloorPlanMap({ liveAPs = NO_APS, siteHasFloorPlan = true
                 cy={ap.renderY}
                 r={getHeatRadius(ap.clientCount)}
               >
-                <stop offset="0%" stopColor="#6366f1" stopOpacity={getHeatOpacity(ap.clientCount)} />
-                <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                <stop offset="0%" stopColor={getApColor(ap)} stopOpacity={getHeatOpacity(ap.clientCount)} />
+                <stop offset="100%" stopColor={getApColor(ap)} stopOpacity={0} />
               </radialGradient>
             ))}
           </defs>
@@ -297,7 +342,7 @@ export default function FloorPlanMap({ liveAPs = NO_APS, siteHasFloorPlan = true
            * all APs in that room together.
            * ─────────────────────────────────────────────────────────────────────
            */}
-          {renderedAPs.map((ap) => {
+          {building !== '' && renderedAPs.map((ap) => {
             const roomKey = `${ap.building}-${ap.room}`;
             const isSelected = selectedRoom === roomKey;
             return (
@@ -337,6 +382,7 @@ export default function FloorPlanMap({ liveAPs = NO_APS, siteHasFloorPlan = true
             );
           })}
         </svg>
+        )}
 
         {/*
          * ── ROOM DETAIL CARD ──────────────────────────────────────────────────
@@ -395,10 +441,7 @@ export default function FloorPlanMap({ liveAPs = NO_APS, siteHasFloorPlan = true
             {item.label}
           </span>
         ))}
-        <span className="flex items-center gap-1 ml-4">
-          <span className="inline-block w-4 h-4 rounded-full opacity-50 bg-indigo-500" />
-          Heat intensity
-        </span>
+        <span className="ml-4 text-gray-400 italic">Heat radius scales with client count</span>
       </div>
     </div>
   );
