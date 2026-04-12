@@ -1,6 +1,6 @@
 {
-  "name": "ITS Challenge — Study Space Finder",
-  "short_name": "ITS Challenge",
+  "name": "WhereTo — Study Space Finder",
+  "short_name": "WhereTo",
   "description": "Find open study spaces, check real-time occupancy, and earn tokens at John Abbott College.",
   "start_url": "/",
   "scope": "/",

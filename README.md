@@ -1,4 +1,4 @@
-# JAC Campus Occupancy Dashboard
+# WhereTo
 
 A real-time occupancy monitoring and study space finder for John Abbott College, built for the **JACHACKS ITS Challenge 2026**.
 

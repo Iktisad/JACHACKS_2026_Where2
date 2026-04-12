@@ -1,4 +1,4 @@
-const CACHE_NAME = 'its-challenge-v2';
+const CACHE_NAME = 'whereto-v1';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
