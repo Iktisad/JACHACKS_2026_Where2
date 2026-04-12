@@ -28,9 +28,14 @@ const SVG_FILES = [
 ];
 
 // Matches a <text> element whose opening tag contains transform="matrix(a,b,c,d,e,f)"
-// and whose first <tspan> contains a 3-4 digit room number.
-// Anchored to <text so path/rect/g transforms are never matched.
-const TEXT_RE = /<text\b[^>]*transform="matrix\(([^)]+)\)"[^>]*>[\s\S]*?<tspan[^>]*>(\d{3,4})<\/tspan>/g;
+// and whose first <tspan> contains a 3-4 digit room number with an optional letter suffix
+// (e.g. "200A", "129C"). Anchored to <text so path/rect/g transforms are never matched.
+//
+// ⚠️  The lazy (?:(?!<\/text>)[\s\S])*? prevents the match from crossing </text>
+//     boundaries.  Without this guard, a <text> with coordinates from the title
+//     block could "steal" a room-number <tspan> that belongs to a completely
+//     different element thousands of lines later in the file.
+const TEXT_RE = /<text\b[^>]*transform="matrix\(([^)]+)\)"[^>]*>(?:(?!<\/text>)[\s\S])*?<tspan[^>]*>(\d{3,4}[A-Za-z]?)<\/tspan>/g;
 
 function round2(n) {
   return Math.round(n * 100) / 100;
@@ -73,15 +78,15 @@ for (const { file, building, level } of SVG_FILES) {
 
     if (!matchesLevel(room, level)) continue;
     if (isNaN(x) || isNaN(y)) continue;
-    // Must be within the usable 1056×695 SVG canvas (below 695 = title block)
-    if (x < 0 || x > 1056 || y < 0 || y > 695) continue;
+    // Must be within the usable 1056×815 SVG canvas (below 815 = title block)
+    if (x < 0 || x > 1056 || y < 0 || y > 815) continue;
 
     const dedupKey = `${building}-${level}-${room}`;
     if (seen.has(dedupKey)) continue;
     seen.add(dedupKey);
 
     results.push({
-      id: `${building.toLowerCase()}${room}`,
+      id: `${building.toLowerCase()}${room.toLowerCase()}`,
       room,
       building,
       level,
@@ -92,6 +97,20 @@ for (const { file, building, level } of SVG_FILES) {
   }
 
   console.log(`  ${file}: ${fileCount} rooms`);
+}
+
+// Synthetic entries for rooms whose SVG label was split into sub-rooms (A/B/C/D).
+// Using the centroid of the sub-room label positions so that APs referencing the
+// plain room number (e.g. "li101-ap-001") can still be plotted.
+const SYNTHETIC_ENTRIES = [
+  // LI level 1: room 101 is divided into 101A/B/C/D — centroid of the four labels
+  { id: 'li101', room: '101', building: 'LI', level: '1', x: 618.96, y: 292.16 },
+];
+
+for (const entry of SYNTHETIC_ENTRIES) {
+  if (!seen.has(`${entry.building}-${entry.level}-${entry.room}`)) {
+    results.push(entry);
+  }
 }
 
 results.sort((a, b) => {

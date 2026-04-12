@@ -66,7 +66,7 @@ const ALL_ROOM_COORDS = roomCoordsRaw as RoomCoord[];
 // ─── Multi-AP positioning logic ───────────────────────────────────────────────
 
 /** Horizontal gap (SVG px) between dots when N APs share the same room. */
-const AP_SPACING = 20;
+const AP_SPACING = 45;
 
 interface RenderedAP extends ApRecord {
   renderX: number; // final SVG x with multi-AP horizontal offset applied

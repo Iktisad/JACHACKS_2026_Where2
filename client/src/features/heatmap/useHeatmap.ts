@@ -7,15 +7,15 @@ const THIRTY_SECONDS = 30_000;
 
 /**
  * Parse AP device name into its building/room/apId components.
- * Expected format: "he041-ap-001" or "li102-ap-002" (case-insensitive).
+ * Expected format: "he041-ap-001", "li102-ap-002", or with letter suffix "he200a-ap-001" (case-insensitive).
  * Returns null if the name does not match the convention.
  */
 function parseApName(name: string): { building: string; room: string; apId: string } | null {
-  const m = name.match(/^(he|li)(\d{3,4})-ap-(\d{3})$/i);
+  const m = name.match(/^(he|li)(\d{3,4}[a-z]?)-ap-(\d{3})$/i);
   if (!m) return null;
   return {
     building: m[1].toUpperCase(),  // "he" → "HE"
-    room: m[2],                     // "041"
+    room: m[2].toLowerCase(),       // "200A" → "200a"
     apId: m[3],                     // "001"
   };
 }
@@ -25,7 +25,7 @@ function toApRecord(ap: HeatmapAP): ApRecord | null {
   const parsed = parseApName(ap.name);
   if (!parsed) return null;
   return {
-    id: `${parsed.building.toLowerCase()}${parsed.room}`, // e.g. "he041"
+    id: `${parsed.building.toLowerCase()}${parsed.room}`, // e.g. "he041", "he200a"
     room: parsed.room,
     building: parsed.building,
     apId: parsed.apId,
