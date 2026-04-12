@@ -183,6 +183,7 @@ export function BuildingHeatmap() {
           onTimeToChange={() => {}}
           hideFilters
           hideTimeline
+          hideAPDots
         />
       </div>
     </div>

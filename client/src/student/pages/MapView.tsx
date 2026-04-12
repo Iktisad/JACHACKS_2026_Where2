@@ -32,15 +32,19 @@ const BUILDINGS = [
   },
 ];
 
-function getOccupancyStatus(count: number): { label: string; color: string; dotClass: string } {
-  if (count === 0) return { label: 'Empty', color: '#166534', dotClass: 'bg-[var(--status-low)]' };
-  if (count < 30) return { label: 'Available', color: '#166534', dotClass: 'bg-[var(--status-low)]' };
-  if (count < 80) return { label: 'Moderate', color: '#92400e', dotClass: 'bg-[var(--status-moderate)]' };
-  return { label: 'Busy', color: '#991b1b', dotClass: 'bg-[var(--status-high)]' };
+const MAX_DEVICES_PER_AP = 30;
+
+function getOccupancyStatus(clientCount: number, apCount: number): { label: string; color: string; barColor: string; dotClass: string; pct: number } {
+  if (apCount === 0) return { label: 'Empty', color: '#166534', barColor: 'var(--status-low)', dotClass: 'bg-[var(--status-low)]', pct: 0 };
+  const pct = Math.min(clientCount / (apCount * MAX_DEVICES_PER_AP), 1);
+  if (pct === 0) return { label: 'Empty',    color: '#166534', barColor: 'var(--status-low)',      dotClass: 'bg-[var(--status-low)]',      pct };
+  if (pct <= 0.4) return { label: 'Low',      color: '#166534', barColor: 'var(--status-low)',      dotClass: 'bg-[var(--status-low)]',      pct };
+  if (pct <= 0.7) return { label: 'Moderate', color: '#92400e', barColor: 'var(--status-moderate)', dotClass: 'bg-[var(--status-moderate)]', pct };
+  return              { label: 'High',     color: '#991b1b', barColor: 'var(--status-high)',     dotClass: 'bg-[var(--status-high)]',     pct };
 }
 
-const buildingIcon = (clientCount: number) => {
-  const { color } = getOccupancyStatus(clientCount);
+const buildingIcon = (clientCount: number, apCount: number) => {
+  const { color } = getOccupancyStatus(clientCount, apCount);
   return L.divIcon({
     className: '',
     html: `<div style="
@@ -131,12 +135,11 @@ export function MapView() {
 
   const { aps, refreshing, polledAt } = useHeatmap();
 
-  // Aggregate live client counts per building
+  // Aggregate live client counts and AP count per building
   const buildingClients = BUILDINGS.map((b) => {
-    const count = aps
-      .filter((ap) => ap.building === b.code)
-      .reduce((sum, ap) => sum + ap.clientCount, 0);
-    return { ...b, clientCount: count };
+    const buildingAps = aps.filter((ap) => ap.building === b.code);
+    const count = buildingAps.reduce((sum, ap) => sum + ap.clientCount, 0);
+    return { ...b, clientCount: count, apCount: buildingAps.length };
   });
 
   useEffect(() => {
@@ -200,7 +203,7 @@ export function MapView() {
             <Marker
               key={building.code}
               position={[building.lat, building.lng]}
-              icon={buildingIcon(building.clientCount)}
+              icon={buildingIcon(building.clientCount, building.apCount)}
               eventHandlers={{
                 click: () => navigate(`/student/building/${building.code}`),
               }}
@@ -209,10 +212,10 @@ export function MapView() {
                 <div className="min-w-[160px] p-1">
                   <p className="font-semibold text-[13px]">{building.fullName}</p>
                   <p className="text-[11px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-                    {building.clientCount} connected devices
+                    Occupancy: {getOccupancyStatus(building.clientCount, building.apCount).label}
                   </p>
                   <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
-                    {building.floors.length} floors
+                    {building.floors.length} floors · {building.apCount} access points
                   </p>
                   {userPos && <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>{distanceTo(userPos, building.lat, building.lng)} away</p>}
                   <p className="text-[11px] mt-1 font-medium" style={{ color: 'var(--primary)' }}>Tap to view heatmap →</p>
@@ -243,11 +246,25 @@ export function MapView() {
                 Campus Buildings
               </h3>
               <p className="text-[12px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-                Tap a building to view live occupancy
+                Tap a marker on the map to view live occupancy
                 {polledAt && (
                   <span> · Data from {new Date(polledAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 )}
               </p>
+              <div className="flex items-center gap-3 mt-1.5">
+                <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-low)] inline-block" />
+                  Low
+                </span>
+                <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-moderate)] inline-block" />
+                  Moderate
+                </span>
+                <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-high)] inline-block" />
+                  High
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {refreshing && (
@@ -265,13 +282,11 @@ export function MapView() {
               <p className="text-[13px] py-3 px-1" style={{ color: 'var(--muted-foreground)' }}>No buildings match "{query}".</p>
             )}
             {filtered.map((building) => {
-              const status = getOccupancyStatus(building.clientCount);
+              const status = getOccupancyStatus(building.clientCount, building.apCount);
               return (
-                <button
+                <div
                   key={building.code}
-                  type="button"
-                  onClick={() => navigate(`/student/building/${building.code}`)}
-                  className="flex-1 min-w-40 rounded-xl p-3.5 border transition-all text-left"
+                  className="flex-1 min-w-40 rounded-xl p-3.5 border"
                   style={{ background: 'var(--background)', borderColor: 'var(--border)' }}
                 >
                   <div className="flex items-center gap-2.5 mb-2.5">
@@ -286,18 +301,19 @@ export function MapView() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
-                      <span className="text-[12px] font-medium" style={{ color: 'var(--muted-foreground)' }}>
-                        {status.label}
-                      </span>
-                    </div>
-                    <span className="text-[12px] font-semibold tabular-nums" style={{ color: 'var(--foreground)' }}>
-                      {building.clientCount} <span className="font-normal" style={{ color: 'var(--muted-foreground)' }}>devices</span>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
+                    <span className="text-[12px] font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                      {building.apCount === 0 ? 'Loading…' : status.label}
                     </span>
                   </div>
-                </button>
+                  <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.round(status.pct * 100)}%`, background: status.barColor }}
+                    />
+                  </div>
+                </div>
               );
             })}
           </div>
