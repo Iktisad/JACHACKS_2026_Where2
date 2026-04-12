@@ -3,16 +3,25 @@ import { fetchHeatmap } from '../../api/heatmap';
 import { usePolling } from '../../shared/hooks/usePolling';
 import type { FinderSpace } from '../services/spaceFinder';
 
-const CAPACITY = 30;
+const AP_REGEX = /^(he|li)(\d{3,4}[a-z]?)-ap-\d{3}$/i;
+const CAPACITY_PER_AP = 30;
 
-function occupancyStatus(occupancy: number): FinderSpace['status'] {
-  const pct = occupancy / CAPACITY;
+function floorName(n: number): string {
+  if (n === 0) return 'Ground Floor';
+  if (n === 1) return '1st Floor';
+  if (n === 2) return '2nd Floor';
+  if (n === 3) return '3rd Floor';
+  return `${n}th Floor`;
+}
+
+function occupancyStatus(occupancy: number, capacity: number): FinderSpace['status'] {
+  const pct = capacity > 0 ? occupancy / capacity : 0;
   if (pct >= 0.7) return 'high';
   if (pct >= 0.4) return 'moderate';
   return 'low';
 }
 
-/** Derives live study spaces from /api/heatmap/current, polled every 30s. */
+/** Derives live study spaces from /api/heatmap/current, grouped by building+floor, polled every 30s. */
 export function useStudentSpaces(): { spaces: FinderSpace[]; loading: boolean } {
   const [spaces, setSpaces] = useState<FinderSpace[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,49 +30,53 @@ export function useStudentSpaces(): { spaces: FinderSpace[]; loading: boolean } 
     try {
       const aps = await fetchHeatmap();
 
-      let libraryClients = 0;
-      let herzbergClients = 0;
+      const floorMap = new Map<
+        string,
+        { buildingPrefix: string; floorNum: number; apCount: number; totalClients: number }
+      >();
 
       for (const ap of aps) {
-        const name = ap.name.toLowerCase();
+        const m = AP_REGEX.exec(ap.name?.toLowerCase() ?? '');
+        if (!m) continue;
+        const prefix = m[1]!;
+        const roomStr = m[2]!;
+        const roomNum = parseInt(roomStr.replace(/[a-z]/gi, ''), 10);
+        const floor = Math.floor(roomNum / 100);
+        const key = `${prefix}${floor}`;
         const count = Number(ap.client_count) + Number(ap.wired_client_count);
-        if (name.startsWith('li')) {
-          libraryClients += count;
-        } else if (name.startsWith('he')) {
-          herzbergClients += count;
-        }
+        const entry = floorMap.get(key) ?? { buildingPrefix: prefix, floorNum: floor, apCount: 0, totalClients: 0 };
+        entry.apCount += 1;
+        entry.totalClients += count;
+        floorMap.set(key, entry);
       }
 
-      // Cap at capacity
-      const libOccupancy = Math.min(libraryClients, CAPACITY);
-      const heOccupancy = Math.min(herzbergClients, CAPACITY);
+      const result: FinderSpace[] = [];
+      for (const [, data] of floorMap) {
+        const isLib = data.buildingPrefix === 'li';
+        const capacity = data.apCount * CAPACITY_PER_AP;
+        const occupancy = Math.min(data.totalClients, capacity);
+        result.push({
+          id: isLib ? 100 + data.floorNum : 200 + data.floorNum,
+          name: isLib
+            ? `Library \u2013 ${floorName(data.floorNum)}`
+            : `Herzberg \u2013 ${floorName(data.floorNum)}`,
+          building: isLib ? 'Main Library' : 'Herzberg Building',
+          floor: floorName(data.floorNum),
+          distance: isLib ? '120m' : '180m',
+          noiseLevel: isLib ? 'Quiet' : 'Moderate',
+          amenities: isLib
+            ? ['wifi', 'outlets', 'quiet', 'natural-light']
+            : ['wifi', 'whiteboard', 'projector'],
+          occupancy,
+          capacity,
+          status: occupancyStatus(occupancy, capacity),
+        });
+      }
 
-      setSpaces([
-        {
-          id: 2,
-          name: 'Library 3F',
-          building: 'Main Library',
-          floor: '3rd Floor',
-          distance: '120m',
-          noiseLevel: 'Quiet',
-          amenities: ['wifi', 'outlets', 'quiet', 'natural-light'],
-          occupancy: libOccupancy,
-          capacity: CAPACITY,
-          status: occupancyStatus(libOccupancy),
-        },
-        {
-          id: 3,
-          name: 'Herzberg 204',
-          building: 'Herzberg Building',
-          floor: '2nd Floor',
-          distance: '180m',
-          noiseLevel: 'Moderate',
-          amenities: ['wifi', 'whiteboard', 'projector'],
-          occupancy: heOccupancy,
-          capacity: CAPACITY,
-          status: occupancyStatus(heOccupancy),
-        },
-      ]);
+      // Sort by lowest occupancy ratio (most available first)
+      result.sort((a, b) => a.occupancy / a.capacity - b.occupancy / b.capacity);
+
+      setSpaces(result);
     } catch {
       // Keep stale data on error; don't wipe the list
     } finally {

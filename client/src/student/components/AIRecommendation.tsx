@@ -59,7 +59,7 @@ export function AIRecommendation({ space, insight, loading }: AIRecommendationPr
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Users className="w-3.5 h-3.5 shrink-0" strokeWidth={1.7} />
-                  {space.capacity - space.occupancy} seats free
+                  {Math.round((space.occupancy / space.capacity) * 100)}% occupied
                 </span>
                 {space.distance && (
                   <span>{space.distance} away</span>

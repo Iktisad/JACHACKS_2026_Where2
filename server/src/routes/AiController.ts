@@ -3,7 +3,7 @@ import { Router as createRouter } from 'express';
 import type { Database } from '../db/Database.js';
 import type { GeminiService, AiSpace } from '../ai/GeminiService.js';
 
-interface SpaceCatalogEntry {
+interface FloorSpace {
   id: number;
   name: string;
   building: string;
@@ -12,34 +12,10 @@ interface SpaceCatalogEntry {
   noiseLevel: string;
   amenities: string[];
   distance: string;
-  // building keywords present in the access_points.building column
-  dbBuildingKeywords: string[];
+  occupancy: number;
 }
 
-const SPACES_CATALOG: SpaceCatalogEntry[] = [
-  {
-    id: 2,
-    name: 'Library 3F',
-    building: 'Main Library',
-    floor: '3rd Floor',
-    capacity: 30,
-    noiseLevel: 'Quiet',
-    amenities: ['wifi', 'outlets', 'quiet', 'natural-light'],
-    distance: '120m',
-    dbBuildingKeywords: ['library', 'li'],
-  },
-  {
-    id: 3,
-    name: 'Herzberg 204',
-    building: 'Herzberg Building',
-    floor: '2nd Floor',
-    capacity: 30,
-    noiseLevel: 'Moderate',
-    amenities: ['wifi', 'whiteboard', 'projector'],
-    distance: '180m',
-    dbBuildingKeywords: ['herzberg', 'he'],
-  },
-];
+const AP_REGEX = /^(he|li)(\d{3,4}[a-z]?)-ap-\d{3}$/i;
 
 export class AiController {
   readonly router: Router;
@@ -69,16 +45,21 @@ export class AiController {
         return;
       }
 
-      const clientCounts = await this.getLiveClientCounts();
+      const floorSpaces = await this.getLiveFloorSpaces();
 
-      const aiSpaces: AiSpace[] = SPACES_CATALOG.map((entry) => ({
-        name: entry.name,
-        building: entry.building,
-        floor: entry.floor,
-        capacity: entry.capacity,
-        noiseLevel: entry.noiseLevel,
-        amenities: entry.amenities,
-        occupancy: clientCounts.get(entry.name) ?? 0,
+      if (floorSpaces.length === 0) {
+        res.status(503).json({ error: 'No space data available' });
+        return;
+      }
+
+      const aiSpaces: AiSpace[] = floorSpaces.map((s) => ({
+        name: s.name,
+        building: s.building,
+        floor: s.floor,
+        capacity: s.capacity,
+        noiseLevel: s.noiseLevel,
+        amenities: s.amenities,
+        occupancy: s.occupancy,
       }));
 
       const suggestion = await this.gemini.suggestSpace(
@@ -86,23 +67,21 @@ export class AiController {
         aiSpaces,
       );
 
-      const matchedEntry =
-        SPACES_CATALOG.find((e) => e.name === suggestion.spaceName) ?? SPACES_CATALOG[0]!;
-      const matchedAiSpace =
-        aiSpaces.find((s) => s.name === suggestion.spaceName) ?? aiSpaces[0]!;
+      const matched =
+        floorSpaces.find((s) => s.name === suggestion.spaceName) ?? floorSpaces[0]!;
 
       res.json({
         space: {
-          id: matchedEntry.id,
-          name: matchedEntry.name,
-          building: matchedEntry.building,
-          floor: matchedEntry.floor,
-          occupancy: matchedAiSpace.occupancy,
-          capacity: matchedEntry.capacity,
-          status: this.occupancyStatus(matchedAiSpace.occupancy, matchedEntry.capacity),
-          noiseLevel: matchedEntry.noiseLevel,
-          amenities: matchedEntry.amenities,
-          distance: matchedEntry.distance,
+          id: matched.id,
+          name: matched.name,
+          building: matched.building,
+          floor: matched.floor,
+          occupancy: matched.occupancy,
+          capacity: matched.capacity,
+          status: this.occupancyStatus(matched.occupancy, matched.capacity),
+          noiseLevel: matched.noiseLevel,
+          amenities: matched.amenities,
+          distance: matched.distance,
         },
         insight: suggestion.insight,
       });
@@ -112,39 +91,80 @@ export class AiController {
     }
   }
 
-  private async getLiveClientCounts(): Promise<Map<string, number>> {
+  private async getLiveFloorSpaces(): Promise<FloorSpace[]> {
     const db = this.db.getKnex();
-    const map = new Map<string, number>();
+    const spaces: FloorSpace[] = [];
 
     try {
       const epochRow = await db('ap_snapshots')
         .select('epoch')
-        .groupBy('epoch')
-        .havingRaw('SUM(client_count) + SUM(wired_client_count) > 0')
         .orderBy('epoch', 'desc')
         .first();
 
-      if (!epochRow?.epoch) return map;
+      if (!epochRow?.epoch) return spaces;
 
       const rows = (await db('ap_snapshots as s')
         .join('access_points as ap', 'ap.id', 's.ap_id')
         .where('s.epoch', epochRow.epoch)
-        .select('ap.building', db.raw('SUM(s.client_count) as total'))
-        .groupBy('ap.building')) as { building: string; total: number }[];
+        .select(
+          'ap.name',
+          db.raw('s.client_count + s.wired_client_count as total_clients'),
+        )) as { name: string; total_clients: number }[];
+
+      const floorMap = new Map<
+        string,
+        { buildingPrefix: string; floorNum: number; apCount: number; totalClients: number }
+      >();
 
       for (const row of rows) {
-        const buildingLower = (row.building ?? '').toLowerCase();
-        for (const entry of SPACES_CATALOG) {
-          if (entry.dbBuildingKeywords.some((kw) => buildingLower.includes(kw))) {
-            map.set(entry.name, (map.get(entry.name) ?? 0) + Number(row.total));
-          }
-        }
+        const m = AP_REGEX.exec(row.name?.toLowerCase() ?? '');
+        if (!m) continue;
+        const prefix = m[1]!;
+        const roomStr = m[2]!;
+        const roomNum = parseInt(roomStr.replace(/[a-z]/gi, ''), 10);
+        const floorNum = Math.floor(roomNum / 100);
+        const key = `${prefix}${floorNum}`;
+        const entry = floorMap.get(key) ?? { buildingPrefix: prefix, floorNum, apCount: 0, totalClients: 0 };
+        entry.apCount += 1;
+        entry.totalClients += Number(row.total_clients ?? 0);
+        floorMap.set(key, entry);
       }
+
+      for (const [, data] of floorMap) {
+        const isLib = data.buildingPrefix === 'li';
+        const capacity = data.apCount * 30;
+        const occupancy = Math.min(data.totalClients, capacity);
+        spaces.push({
+          id: isLib ? 100 + data.floorNum : 200 + data.floorNum,
+          name: isLib
+            ? `Library \u2013 ${this.floorName(data.floorNum)}`
+            : `Herzberg \u2013 ${this.floorName(data.floorNum)}`,
+          building: isLib ? 'Main Library' : 'Herzberg Building',
+          floor: this.floorName(data.floorNum),
+          capacity,
+          noiseLevel: isLib ? 'Quiet' : 'Moderate',
+          amenities: isLib
+            ? ['wifi', 'outlets', 'quiet', 'natural-light']
+            : ['wifi', 'whiteboard', 'projector'],
+          distance: isLib ? '120m' : '180m',
+          occupancy,
+        });
+      }
+
+      spaces.sort((a, b) => a.occupancy / a.capacity - b.occupancy / b.capacity);
     } catch (err) {
-      console.warn('[ai] failed to fetch live counts, occupancy defaulting to 0:', err);
+      console.warn('[ai] failed to fetch live floor spaces:', err);
     }
 
-    return map;
+    return spaces;
+  }
+
+  private floorName(n: number): string {
+    if (n === 0) return 'Ground Floor';
+    if (n === 1) return '1st Floor';
+    if (n === 2) return '2nd Floor';
+    if (n === 3) return '3rd Floor';
+    return `${n}th Floor`;
   }
 
   private occupancyStatus(occupancy: number, capacity: number): 'low' | 'moderate' | 'high' {

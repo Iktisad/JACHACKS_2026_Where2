@@ -100,7 +100,7 @@ export function SpaceCard({ space, compact = false }: SpaceCardProps) {
                   />
                 </div>
                 <p className="text-[11px] mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                  {space.occupancy} of {space.capacity} seats
+                  {pct.toFixed(0)}% occupied
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
@@ -159,7 +159,7 @@ export function SpaceCard({ space, compact = false }: SpaceCardProps) {
           <div className="flex items-center justify-between text-[12px] mb-1.5">
             <span style={{ color: 'var(--muted-foreground)' }}>Occupancy</span>
             <span className="font-medium tabular-nums" style={{ color: 'var(--foreground)' }}>
-              {space.occupancy}/{space.capacity}
+              {pct.toFixed(0)}%
             </span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--muted)' }}>
