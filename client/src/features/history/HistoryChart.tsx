@@ -22,6 +22,33 @@ interface Props {
   data: HistoryPoint[];
 }
 
+const MAX_POINTS = 36;
+
+/** Downsample by averaging points into evenly-spaced time buckets. */
+function downsample(points: ChartPoint[]): ChartPoint[] {
+  if (points.length <= MAX_POINTS) return points;
+
+  const bucketCount = MAX_POINTS;
+  const minT = points[0].epoch;
+  const maxT = points[points.length - 1].epoch;
+  const bucketSize = (maxT - minT) / bucketCount;
+
+  const buckets: ChartPoint[][] = Array.from({ length: bucketCount }, () => []);
+  for (const p of points) {
+    const idx = Math.min(Math.floor((p.epoch - minT) / bucketSize), bucketCount - 1);
+    buckets[idx].push(p);
+  }
+
+  return buckets
+    .filter((b) => b.length > 0)
+    .map((b) => ({
+      epoch: Math.round(b.reduce((s, p) => s + p.epoch, 0) / b.length),
+      total: Math.round(b.reduce((s, p) => s + p.total, 0) / b.length),
+      wireless: Math.round(b.reduce((s, p) => s + p.wireless, 0) / b.length),
+      wired: Math.round(b.reduce((s, p) => s + p.wired, 0) / b.length),
+    }));
+}
+
 export default function HistoryChart({ data }: Props) {
   if (data.length === 0) {
     return (
@@ -31,16 +58,15 @@ export default function HistoryChart({ data }: Props) {
     );
   }
 
-  const chartData = useMemo<ChartPoint[]>(
-    () =>
-      data.map((d) => ({
-        epoch: d.epoch,
-        wireless: d.client_count,
-        wired: d.wired_client_count ?? 0,
-        total: d.client_count + (d.wired_client_count ?? 0),
-      })),
-    [data],
-  );
+  const chartData = useMemo<ChartPoint[]>(() => {
+    const mapped = data.map((d) => ({
+      epoch: d.epoch,
+      wireless: d.client_count,
+      wired: d.wired_client_count ?? 0,
+      total: d.client_count + (d.wired_client_count ?? 0),
+    }));
+    return downsample(mapped);
+  }, [data]);
 
   return (
     <ResponsiveContainer width="100%" height={350}>

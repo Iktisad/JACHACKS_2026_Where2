@@ -146,17 +146,33 @@ export default function AdminDashboard() {
     [aps],
   );
 
-  /* History chart data */
-  const chartData = useMemo(
-    () =>
-      historyData.map((d) => ({
-        epoch: d.epoch,
-        wireless: d.client_count,
-        wired: d.wired_client_count ?? 0,
-        total: d.client_count + (d.wired_client_count ?? 0),
-      })),
-    [historyData],
-  );
+  /* History chart data — downsampled to avoid crowded X-axis labels */
+  const chartData = useMemo(() => {
+    const mapped = historyData.map((d) => ({
+      epoch: d.epoch,
+      wireless: d.client_count,
+      wired: d.wired_client_count ?? 0,
+      total: d.client_count + (d.wired_client_count ?? 0),
+    }));
+    if (mapped.length <= 36) return mapped;
+    const bucketCount = 36;
+    const minT = mapped[0].epoch;
+    const maxT = mapped[mapped.length - 1].epoch;
+    const bucketSize = (maxT - minT) / bucketCount;
+    const buckets: (typeof mapped)[] = Array.from({ length: bucketCount }, () => []);
+    for (const p of mapped) {
+      const idx = Math.min(Math.floor((p.epoch - minT) / bucketSize), bucketCount - 1);
+      buckets[idx].push(p);
+    }
+    return buckets
+      .filter((b) => b.length > 0)
+      .map((b) => ({
+        epoch: Math.round(b.reduce((s, p) => s + p.epoch, 0) / b.length),
+        total: Math.round(b.reduce((s, p) => s + p.total, 0) / b.length),
+        wireless: Math.round(b.reduce((s, p) => s + p.wireless, 0) / b.length),
+        wired: Math.round(b.reduce((s, p) => s + p.wired, 0) / b.length),
+      }));
+  }, [historyData]);
 
   /* Trend: compare first half vs second half */
   const trend = useMemo(() => {
