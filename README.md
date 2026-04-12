@@ -26,7 +26,6 @@ A real-time occupancy monitoring and study space finder for John Abbott College,
 | Tailwind CSS v4 | Styling |
 | react-leaflet / Leaflet | Interactive floor plan maps |
 | Recharts | Time-series occupancy charts |
-| React Router v7 | Client-side routing |
 | Lucide React | Icons |
 | Motion (Framer Motion) | Animations |
 | Radix UI | Accessible UI primitives |
@@ -59,10 +58,6 @@ npm install
 # Install server and client dependencies
 cd server && npm install
 cd ../client && npm install
-
-# Configure environment variables
-cp .env.example .env
-# Fill in: UNIFI_API_KEY, UNIFI_HOST, UNIFI_SITE_ID, GEMINI_API_KEY
 
 # Start both servers concurrently
 cd .. && npm run dev
