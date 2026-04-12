@@ -14,10 +14,11 @@ export class HeatmapController {
     this.router.get('/current', (req, res) => void this.getCurrent(req, res));
   }
 
-  private async getCurrent(_req: Request, res: Response): Promise<void> {
+  private async getCurrent(req: Request, res: Response): Promise<void> {
     try {
+      const siteId = req.query['site_id'] as string | undefined;
       const db = this.db.getKnex();
-      const rows = await db('access_points as ap')
+      let q = db('access_points as ap')
         .leftJoin('ap_snapshots as s', function () {
           this.on('s.ap_id', '=', 'ap.id').andOn(
             's.epoch',
@@ -33,7 +34,8 @@ export class HeatmapController {
           'ap.map_y',
           db.raw('COALESCE(s.client_count, 0) as client_count'),
         );
-      res.json(rows);
+      if (siteId) q = q.where('ap.site_id', siteId);
+      res.json(await q);
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }

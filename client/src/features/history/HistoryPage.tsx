@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchDevices } from '../../api/devices';
 import { useHistory } from './useHistory';
+import { useSites } from '../../shared/hooks/useSites';
 import HistoryChart from './HistoryChart';
 import HistoryTable from './HistoryTable';
 import StatCard from '../../shared/components/StatCard';
@@ -27,14 +28,17 @@ export default function HistoryPage() {
   const now = Math.floor(Date.now() / 1000);
   const [from, setFrom] = useState(now - 86400);
   const [to, setTo] = useState(now);
+  const [siteId, setSiteId] = useState('');
   const [apId, setApId] = useState('');
   const [devices, setDevices] = useState<Device[]>([]);
+  const { sites } = useSites();
 
   useEffect(() => {
-    fetchDevices().then(setDevices).catch(() => {});
-  }, []);
+    setApId(''); // reset AP when site changes
+    fetchDevices(siteId || undefined).then(setDevices).catch(() => {});
+  }, [siteId]);
 
-  const params: HistoryParams = { from, to, ap_id: apId || undefined };
+  const params: HistoryParams = { from, to, ap_id: apId || undefined, site_id: siteId || undefined };
   const { data, loading, error } = useHistory(params);
 
   const latestCount = data.at(-1)?.client_count ?? 0;
@@ -48,6 +52,20 @@ export default function HistoryPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-4 bg-white border rounded-lg p-4">
+        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+          Site
+          <select
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm min-w-45"
+            value={siteId}
+            onChange={(e) => setSiteId(e.target.value)}
+          >
+            <option value="">All Sites</option>
+            {sites.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </label>
+
         <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
           Access Point
           <select

@@ -26,6 +26,7 @@ export class HistoryController {
         return;
       }
 
+      const siteId = req.query['site_id'] as string | undefined;
       const db = this.db.getKnex();
 
       if (apId) {
@@ -37,12 +38,13 @@ export class HistoryController {
           .limit(2016);
         res.json(rows);
       } else {
-        const rows = await db('site_snapshots')
+        let q = db('site_snapshots')
           .select('epoch', 'total_clients as client_count')
           .whereBetween('epoch', [from, to])
           .orderBy('epoch', 'asc')
           .limit(2016);
-        res.json(rows);
+        if (siteId) q = q.where('site_id', siteId);
+        res.json(await q);
       }
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });

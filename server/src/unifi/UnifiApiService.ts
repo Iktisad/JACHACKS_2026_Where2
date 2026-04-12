@@ -1,14 +1,12 @@
 import type { Config } from '../config.js';
-import type { UnifiDevice, UnifiClient, UnifiPage } from './types.js';
+import type { UnifiDevice, UnifiClient, UnifiPage, UnifiSite } from './types.js';
 
 export class UnifiApiService {
   private readonly baseUrl: string;
-  private readonly siteId: string;
   private readonly headers: Record<string, string>;
 
   constructor(config: Config) {
     this.baseUrl = config.UNIFI_BASE_URL;
-    this.siteId = config.UNIFI_SITE_ID;
     this.headers = {
       'X-API-KEY': config.UNIFI_API_KEY,
       'Accept': 'application/json',
@@ -24,34 +22,45 @@ export class UnifiApiService {
     return res.json() as Promise<UnifiPage<T>>;
   }
 
-  private buildUrl(path: string, params?: Record<string, string>): string {
-    const base = `${this.baseUrl}/sites/${this.siteId}${path}`;
-    if (!params) return base;
-    return `${base}?${new URLSearchParams(params)}`;
+  async fetchSites(): Promise<UnifiSite[]> {
+    const url = `${this.baseUrl}/sites`;
+    const page = await this.getPage<UnifiSite>(url);
+    console.log(`[unifi] fetched ${page.totalCount} sites`);
+    return page.data;
   }
 
-  async fetchDevices(): Promise<UnifiDevice[]> {
+  async fetchDevices(siteId: string): Promise<UnifiDevice[]> {
     const results: UnifiDevice[] = [];
     const limit = 200;
     let offset = 0;
 
     while (true) {
-      const url = this.buildUrl('/devices', { limit: String(limit), offset: String(offset) });
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      const url = `${this.baseUrl}/sites/${siteId}/devices?${params}`;
       const page = await this.getPage<UnifiDevice>(url);
       results.push(...page.data);
       offset += page.count;
       if (offset >= page.totalCount || page.count === 0) break;
     }
 
-    console.log(`[unifi] fetched ${results.length} devices`);
     return results;
   }
 
-  async fetchWirelessClients(): Promise<UnifiClient[]> {
-    const url = this.buildUrl('/clients', { limit: '200' });
-    const page = await this.getPage<UnifiClient>(url);
-    const wireless = page.data.filter((c) => c.type === 'WIRELESS');
-    console.log(`[unifi] fetched ${wireless.length} wireless clients (total: ${page.totalCount})`);
-    return wireless;
+  async fetchWirelessClients(siteId: string): Promise<UnifiClient[]> {
+    const results: UnifiClient[] = [];
+    const limit = 200;
+    let offset = 0;
+
+    while (true) {
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      const url = `${this.baseUrl}/sites/${siteId}/clients?${params}`;
+      const page = await this.getPage<UnifiClient>(url);
+      const wireless = page.data.filter((c) => c.type === 'WIRELESS');
+      results.push(...wireless);
+      offset += page.count;
+      if (offset >= page.totalCount || page.count === 0) break;
+    }
+
+    return results;
   }
 }

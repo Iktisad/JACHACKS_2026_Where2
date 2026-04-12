@@ -6,6 +6,6 @@ export async function fetchHistory(params: HistoryParams): Promise<HistoryPoint[
   if (params.from !== undefined) p['from'] = String(params.from);
   if (params.to !== undefined) p['to'] = String(params.to);
   if (params.ap_id) p['ap_id'] = params.ap_id;
+  if (params.site_id) p['site_id'] = params.site_id;
   return apiFetch<HistoryPoint[]>('/history', p);
 }
-

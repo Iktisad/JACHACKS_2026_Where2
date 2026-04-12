@@ -1,0 +1,207 @@
+@startuml api_overview
+title JACHACKS ITS Challenge — API Overview
+
+skinparam defaultFontName Arial
+skinparam backgroundColor #FAFAFA
+skinparam sequenceArrowThickness 1.5
+skinparam roundcorner 6
+skinparam participantPadding 10
+
+actor       "Frontend\n:5173"      as FE
+participant "Express\n:3001"       as API
+participant "PollerService"        as Poller
+database    "SQLite\napp.db"       as DB
+participant "UniFi Cloud\nAPI v1"  as Unifi
+
+== Startup ==
+
+API  -> DB     : connect() + migrate.latest()
+API  -> Poller : start()
+Poller -> Unifi : fetchDevices() [paginated]
+Unifi --> Poller : UnifiDevice[] (547 total, 334 APs)
+Poller -> Unifi : fetchWirelessClients()
+Unifi --> Poller : UnifiClient[] (WIRELESS only)
+Poller -> DB   : UPSERT access_points\nINSERT ap_snapshots\nINSERT site_snapshots
+Poller --> API : tick complete — repeats every 5 min
+
+== Request: GET /api/ping ==
+
+FE  -> API : GET /api/ping
+API --> FE : 200 { ok: true }
+
+== Request: GET /api/devices ==
+
+FE  -> API : GET /api/devices
+API -> DB  : SELECT * FROM access_points\nORDER BY building, name
+DB --> API : access_point[]
+API --> FE : 200 [ { id, name, building, mac_address, map_x, map_y, ... } ]
+
+== Request: GET /api/history ==
+
+FE  -> API : GET /api/history?from=&to=&ap_id=
+alt ap_id provided
+  API -> DB  : SELECT epoch, client_count\nFROM ap_snapshots\nWHERE ap_id=? AND epoch BETWEEN ? AND ?
+else site-wide
+  API -> DB  : SELECT epoch, total_clients\nFROM site_snapshots\nWHERE epoch BETWEEN ? AND ?
+end
+DB --> API : rows[]
+API --> FE : 200 [ { epoch, client_count } ]
+
+== Request: GET /api/heatmap/current ==
+
+FE  -> API : GET /api/heatmap/current
+API -> DB  : SELECT ap.*, COALESCE(s.client_count,0)\nFROM access_points ap\nLEFT JOIN ap_snapshots s\n  ON s.ap_id=ap.id\n  AND s.epoch=(SELECT MAX(epoch) FROM ap_snapshots WHERE ap_id=ap.id)
+DB --> API : rows[]
+API --> FE : 200 [ { ap_id, name, building, map_x, map_y, client_count } ]
+
+@enduml
+
+' ─────────────────────────────────────────────────────────────────────────────
+
+@startuml poller_tick
+title PollerService — Tick Sequence (every 5 min)
+
+skinparam defaultFontName Arial
+skinparam backgroundColor #FAFAFA
+skinparam sequenceArrowThickness 1.5
+skinparam roundcorner 6
+
+participant "PollerService" as P
+participant "UnifiApiService" as API
+participant "UniFi Cloud"    as Unifi
+database    "SQLite"         as DB
+
+P -> API  : fetchDevices()
+loop paginate — offset 0, 200, 400... until offset >= totalCount (547)
+  API -> Unifi : GET /sites/{id}/devices?limit=200&offset=N
+  Unifi --> API : UnifiPage<UnifiDevice>
+end
+API --> P : UnifiDevice[] (all 547)
+P -> P   : filter features.includes('accessPoint')\n→ 334 APs
+
+loop for each AP
+  P -> DB : INSERT INTO access_points ... ON CONFLICT(id) DO UPDATE\n(never overwrites map_x, map_y)
+end
+
+P -> API  : fetchWirelessClients()
+API -> Unifi : GET /sites/{id}/clients?limit=200
+Unifi --> API : UnifiPage<UnifiClient>
+API --> P : UnifiClient[] (WIRELESS filtered client-side)
+
+P -> P   : group by uplinkDeviceId → Map<ap_id, count>
+P -> DB  : INSERT INTO ap_snapshots (bulk — one row per AP)
+P -> DB  : INSERT INTO site_snapshots (total_clients = sum of all counts)
+P -> P   : log "[poller] tick — 334 APs, N wireless clients"
+
+@enduml
+
+' ─────────────────────────────────────────────────────────────────────────────
+
+@startuml database_erd
+title Database Schema — ERD
+
+skinparam defaultFontName Arial
+skinparam backgroundColor #FAFAFA
+skinparam linetype ortho
+
+entity "access_points" as AP {
+  * id         : TEXT   <<PK>>  — UniFi device UUID
+  --
+  * mac_address : TEXT  <<unique>>
+  * name        : TEXT
+  * model       : TEXT
+  * building    : TEXT          — Library | Herzberg | Unknown
+    map_x       : REAL          — pixel X on floor plan image
+    map_y       : REAL          — pixel Y on floor plan image
+  * updated_at  : TIMESTAMP
+}
+
+entity "ap_snapshots" as APS {
+  * id          : INTEGER <<PK autoincrement>>
+  --
+  * ap_id       : TEXT    <<FK → access_points.id>>
+  * client_count: INTEGER
+  * epoch       : INTEGER       — Unix seconds
+}
+
+entity "site_snapshots" as SS {
+  * id            : INTEGER <<PK autoincrement>>
+  --
+  * total_clients : INTEGER
+  * epoch         : INTEGER     — Unix seconds
+}
+
+AP ||--o{ APS : "one AP\nhas many snapshots"
+
+note right of APS
+  Indexes:
+  • (ap_id, epoch)
+end note
+
+note right of SS
+  Index:
+  • (epoch)
+  One row per poller tick
+end note
+
+note right of AP
+  map_x / map_y set once
+  by seed script — never
+  overwritten by poller
+end note
+
+@enduml
+
+' ─────────────────────────────────────────────────────────────────────────────
+
+@startuml component_diagram
+title Component Diagram — Server Architecture
+
+skinparam defaultFontName Arial
+skinparam backgroundColor #FAFAFA
+skinparam componentStyle rectangle
+skinparam roundcorner 8
+
+package "index.ts (Composition Root)" {
+  component "Config\n<<singleton>>" as Config
+}
+
+package "Express App" {
+  component "App" as App
+  component "DevicesController\nGET /api/devices" as DC
+  component "HistoryController\nGET /api/history" as HC
+  component "HeatmapController\nGET /api/heatmap/current" as HMC
+}
+
+package "Background" {
+  component "PollerService\nsetInterval 5 min" as Poller
+  component "UnifiApiService\nfetch wrapper" as UA
+}
+
+package "Data" {
+  component "Database\nKnex + better-sqlite3" as DB
+  database  "app.db" as SQLite
+}
+
+cloud "UniFi Cloud API v1" as Unifi
+
+Config --> App      : injected
+Config --> UA       : injected
+Config --> DB       : injected
+
+App --> DC          : injected
+App --> HC          : injected
+App --> HMC         : injected
+App --> Poller      : injected
+App --> DB          : injected
+
+Poller --> UA       : injected
+Poller --> DB       : injected
+UA --> Unifi        : HTTPS fetch
+
+DC --> DB           : getKnex()
+HC --> DB           : getKnex()
+HMC --> DB          : getKnex()
+DB --> SQLite       : SQL
+
+@enduml

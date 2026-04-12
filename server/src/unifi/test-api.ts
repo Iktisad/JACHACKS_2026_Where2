@@ -8,7 +8,11 @@ const config = Config.getInstance();
 const api = new UnifiApiService(config);
 
 console.log('--- Devices ---');
-const devices = await api.fetchDevices();
+const sites = await api.fetchSites();
+console.log(`Sites: ${sites.map((s) => s.name).join(', ')}`);
+
+const siteId = sites[0]!.id;
+const devices = await api.fetchDevices(siteId);
 const aps = devices.filter((d) => d.features.includes('accessPoint'));
 console.log(`Total devices: ${devices.length}, Access Points: ${aps.length}`);
 if (aps.length > 0) {
@@ -17,7 +21,7 @@ if (aps.length > 0) {
 }
 
 console.log('\n--- Wireless Clients ---');
-const clients = await api.fetchWirelessClients();
+const clients = await api.fetchWirelessClients(siteId);
 console.log(`Wireless clients: ${clients.length}`);
 if (clients.length > 0) {
   const sample = clients[0]!;

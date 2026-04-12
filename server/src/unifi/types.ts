@@ -1,5 +1,12 @@
 // Verified shapes from live UniFi API v1
 
+export interface UnifiSite {
+  id: string;
+  name: string;
+  internalReference: string;
+}
+
+
 export interface UnifiDevice {
   id: string;
   macAddress: string;

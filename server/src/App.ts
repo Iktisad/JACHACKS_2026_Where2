@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import type { Config } from './config.js';
 import type { Database } from './db/Database.js';
 import type { PollerService } from './poller/PollerService.js';
+import type { SitesController } from './routes/SitesController.js';
 import type { DevicesController } from './routes/DevicesController.js';
 import type { HistoryController } from './routes/HistoryController.js';
 import type { HeatmapController } from './routes/HeatmapController.js';
@@ -15,6 +16,7 @@ export class App {
     private readonly config: Config,
     private readonly db: Database,
     private readonly poller: PollerService,
+    private readonly sitesController: SitesController,
     private readonly devicesController: DevicesController,
     private readonly historyController: HistoryController,
     private readonly heatmapController: HeatmapController,
@@ -36,6 +38,7 @@ export class App {
       res.json({ ok: true });
     });
 
+    this.express.use('/api/sites', this.sitesController.router);
     this.express.use('/api/devices', this.devicesController.router);
     this.express.use('/api/history', this.historyController.router);
     this.express.use('/api/heatmap', this.heatmapController.router);

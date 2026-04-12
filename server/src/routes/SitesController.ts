@@ -2,7 +2,7 @@ import type { Request, Response, Router } from 'express';
 import { Router as createRouter } from 'express';
 import type { Database } from '../db/Database.js';
 
-export class DevicesController {
+export class SitesController {
   readonly router: Router;
 
   constructor(private readonly db: Database) {
@@ -11,16 +11,16 @@ export class DevicesController {
   }
 
   private registerRoutes(): void {
-    this.router.get('/', (req, res) => void this.getAll(req, res));
+    this.router.get('/', (req, res) => void this.getSites(req, res));
   }
 
-  private async getAll(req: Request, res: Response): Promise<void> {
+  private async getSites(_req: Request, res: Response): Promise<void> {
     try {
-      const siteId = req.query['site_id'] as string | undefined;
-      let q = this.db.getKnex()('access_points')
-        .orderBy([{ column: 'building' }, { column: 'name' }]);
-      if (siteId) q = q.where('site_id', siteId);
-      res.json(await q);
+      const rows = await this.db.getKnex()('access_points')
+        .distinct('site_id as id', 'site_name as name')
+        .whereNotNull('site_id')
+        .orderBy('site_name');
+      res.json(rows);
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }

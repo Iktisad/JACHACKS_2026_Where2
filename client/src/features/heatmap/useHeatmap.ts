@@ -44,7 +44,7 @@ interface UseHeatmapResult {
   lastUpdated: number | null;
 }
 
-export function useHeatmap(): UseHeatmapResult {
+export function useHeatmap(siteId?: string): UseHeatmapResult {
   const [aps, setAps] = useState<ApRecord[]>([]);
   const [totalClients, setTotalClients] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -52,7 +52,7 @@ export function useHeatmap(): UseHeatmapResult {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
   const load = useCallback(() => {
-    fetchHeatmap()
+    fetchHeatmap(siteId)
       .then((data: HeatmapAP[]) => {
         const records = data.flatMap((ap) => {
           const record = toApRecord(ap);
@@ -65,7 +65,7 @@ export function useHeatmap(): UseHeatmapResult {
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [siteId]);
 
   // Immediate fetch on mount + poll every 30 seconds
   usePolling(load, THIRTY_SECONDS);
