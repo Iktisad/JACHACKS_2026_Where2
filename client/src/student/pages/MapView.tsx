@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Search, Wifi, Zap, Volume2, LocateFixed, AlertCircle, ChevronRight } from 'lucide-react';
+import { Search, LocateFixed, AlertCircle, Building2, Users } from 'lucide-react';
 import { useIsDesktop } from '../hooks/useMediaQuery';
+import { useHeatmap } from '../../features/heatmap/useHeatmap';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -12,27 +13,56 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-const STATUS_COLOR: Record<string, string> = {
-  low: '#166534',
-  moderate: '#92400e',
-  high: '#991b1b',
-};
+const BUILDINGS = [
+  {
+    code: 'LI',
+    name: 'Library',
+    fullName: 'John Abbott Library',
+    lat: 45.40639448283585,
+    lng: -73.94198129672654,
+    floors: ['M', '0', '1', '2', '3'],
+  },
+  {
+    code: 'HE',
+    name: 'Herzberg',
+    fullName: 'Herzberg Building',
+    lat: 45.405938,
+    lng: -73.941918,
+    floors: ['0', '1', '2', '3', '4'],
+  },
+];
 
-const pinIcon = (status: string) =>
-  L.divIcon({
+function getOccupancyStatus(count: number): { label: string; color: string; dotClass: string } {
+  if (count === 0) return { label: 'Empty', color: '#166534', dotClass: 'bg-[var(--status-low)]' };
+  if (count < 30) return { label: 'Available', color: '#166534', dotClass: 'bg-[var(--status-low)]' };
+  if (count < 80) return { label: 'Moderate', color: '#92400e', dotClass: 'bg-[var(--status-moderate)]' };
+  return { label: 'Busy', color: '#991b1b', dotClass: 'bg-[var(--status-high)]' };
+}
+
+const buildingIcon = (clientCount: number) => {
+  const { color } = getOccupancyStatus(clientCount);
+  return L.divIcon({
     className: '',
     html: `<div style="
-      width:34px;height:34px;
-      border-radius:50%;
-      background:${STATUS_COLOR[status] ?? '#64748b'};
+      width:44px;height:44px;
+      border-radius:14px;
+      background:${color};
       border:3px solid white;
-      box-shadow:0 2px 10px rgba(0,0,0,0.28);
+      box-shadow:0 2px 12px rgba(0,0,0,0.28);
       display:flex;align-items:center;justify-content:center;
-    "><div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.8);"></div></div>`,
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -20],
+      cursor:pointer;
+    ">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+        <path d="M9 22v-4h6v4"/>
+        <path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>
+      </svg>
+    </div>`,
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+    popupAnchor: [0, -26],
   });
+};
 
 const userIcon = L.divIcon({
   className: '',
@@ -44,15 +74,6 @@ const userIcon = L.divIcon({
   iconSize: [18, 18],
   iconAnchor: [9, 9],
 });
-
-const studySpaces = [
-  { id: 1, name: 'Casgrain Theatre',  building: 'Casgrain',   lat: 45.405811171962945, lng: -73.94302253465993, occupancy: 3,  capacity: 20, status: 'low',      amenities: ['wifi','outlets','quiet'] },
-  { id: 2, name: 'Library 3F',        building: 'Library',    lat: 45.40639448283585,  lng: -73.94198129672654, occupancy: 28, capacity: 35, status: 'moderate',  amenities: ['wifi','outlets','whiteboard'] },
-  { id: 3, name: 'Hochelaga 105',     building: 'Hochelaga',  lat: 45.4069030506363,   lng: -73.94121696359888, occupancy: 8,  capacity: 25, status: 'low',       amenities: ['wifi','whiteboard'] },
-  { id: 4, name: 'Herzberg 301',      building: 'Herzberg',   lat: 45.405938,          lng: -73.941918,          occupancy: 22, capacity: 25, status: 'high',      amenities: ['wifi','outlets'] },
-  { id: 5, name: 'Laird Hall',        building: 'Laird',      lat: 45.40655864982783,  lng: -73.93992655464686, occupancy: 10, capacity: 30, status: 'low',       amenities: ['wifi','quiet'] },
-  { id: 6, name: 'Stewart Hall',      building: 'Stewart',    lat: 45.40553453530918,  lng: -73.94107401858304, occupancy: 15, capacity: 30, status: 'moderate',  amenities: ['wifi','outlets','whiteboard'] },
-];
 
 const JOHN_ABBOTT_CENTER: [number, number] = [45.4063, -73.9421];
 
@@ -100,28 +121,23 @@ function distanceTo(userPos: { lat: number; lng: number } | null, lat: number, l
   return dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`;
 }
 
-const statusDot: Record<string, string> = {
-  low: 'bg-[var(--status-low)]',
-  moderate: 'bg-[var(--status-moderate)]',
-  high: 'bg-[var(--status-high)]',
-};
-const statusBar: Record<string, string> = {
-  low: 'bg-[var(--status-low)]',
-  moderate: 'bg-[var(--status-moderate)]',
-  high: 'bg-[var(--status-high)]',
-};
-const statusLabel: Record<string, string> = {
-  low: 'Available',
-  moderate: 'Moderate',
-  high: 'Busy',
-};
-
 export function MapView() {
   const isDesktop = useIsDesktop();
+  const navigate = useNavigate();
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [query, setQuery] = useState('');
+
+  const { aps } = useHeatmap();
+
+  // Aggregate live client counts per building
+  const buildingClients = BUILDINGS.map((b) => {
+    const count = aps
+      .filter((ap) => ap.building === b.code)
+      .reduce((sum, ap) => sum + ap.clientCount, 0);
+    return { ...b, clientCount: count };
+  });
 
   useEffect(() => {
     if (!navigator.geolocation) { setGeoError('Geolocation is not supported by your browser.'); return; }
@@ -137,20 +153,17 @@ export function MapView() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  const totalOccupancy = studySpaces.reduce((s, r) => s + r.occupancy, 0);
-  const totalCapacity  = studySpaces.reduce((s, r) => s + r.capacity, 0);
-  const occupancyPct   = Math.round((totalOccupancy / totalCapacity) * 100);
+  const totalClients = buildingClients.reduce((s, b) => s + b.clientCount, 0);
 
   const q = query.trim().toLowerCase();
-  const filteredSpaces = q ? studySpaces.filter((s) => s.name.toLowerCase().includes(q) || s.building.toLowerCase().includes(q) || s.status.toLowerCase().includes(q) || s.amenities.some((a) => a.toLowerCase().includes(q))) : studySpaces;
-
-  const sortedSpaces = userPos
-    ? [...filteredSpaces].sort((a, b) => parseFloat(distanceTo(userPos, a.lat, a.lng)) - parseFloat(distanceTo(userPos, b.lat, b.lng)))
-    : filteredSpaces;
+  const filtered = q
+    ? buildingClients.filter((b) => b.name.toLowerCase().includes(q) || b.fullName.toLowerCase().includes(q) || b.code.toLowerCase().includes(q))
+    : buildingClients;
 
   return (
     <div className="flex flex-col" style={{ background: 'var(--background)', height: isDesktop ? '100vh' : 'calc(100vh - 60px)' }}>
       <div className="flex-1 relative min-h-0">
+        {/* Search bar */}
         <div className="absolute top-4 left-4 right-4 z-[1000]">
           <div className="relative rounded-2xl shadow-md border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.8} />
@@ -158,7 +171,7 @@ export function MapView() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search spaces, buildings…"
+              placeholder="Search buildings…"
               className="w-full pl-11 pr-4 py-3 bg-transparent rounded-2xl text-[14px] focus:outline-none"
               style={{ color: 'var(--foreground)' }}
             />
@@ -183,13 +196,26 @@ export function MapView() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          {filteredSpaces.map((space) => (
-            <Marker key={space.id} position={[space.lat, space.lng]} icon={pinIcon(space.status)}>
+          {filtered.map((building) => (
+            <Marker
+              key={building.code}
+              position={[building.lat, building.lng]}
+              icon={buildingIcon(building.clientCount)}
+              eventHandlers={{
+                click: () => navigate(`/student/building/${building.code}`),
+              }}
+            >
               <Popup>
-                <div className="min-w-[148px] p-1">
-                  <p className="font-semibold text-[13px]">{space.name}</p>
-                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>{space.occupancy}/{space.capacity} occupied</p>
-                  {userPos && <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>{distanceTo(userPos, space.lat, space.lng)} away</p>}
+                <div className="min-w-[160px] p-1">
+                  <p className="font-semibold text-[13px]">{building.fullName}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                    {building.clientCount} connected devices
+                  </p>
+                  <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
+                    {building.floors.length} floors
+                  </p>
+                  {userPos && <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>{distanceTo(userPos, building.lat, building.lng)} away</p>}
+                  <p className="text-[11px] mt-1 font-medium" style={{ color: 'var(--primary)' }}>Tap to view heatmap →</p>
                 </div>
               </Popup>
             </Marker>
@@ -205,6 +231,7 @@ export function MapView() {
         </MapContainer>
       </div>
 
+      {/* Bottom panel — building cards */}
       <div className="shrink-0 border-t shadow-2xl" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-10 h-1 rounded-full" style={{ background: 'var(--border)' }} />
@@ -213,51 +240,60 @@ export function MapView() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-[15px] font-semibold leading-snug" style={{ color: 'var(--foreground)' }}>
-                {q ? `${filteredSpaces.length} result${filteredSpaces.length !== 1 ? 's' : ''} found` : `${studySpaces.filter((s) => s.status !== 'high').length} spots open nearby`}
+                Campus Buildings
               </h3>
-              <p className="text-[12px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>John Abbott College</p>
+              <p className="text-[12px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                Tap a building to view live occupancy
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="h-1 w-14 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-                <div
-                  className={`h-full rounded-full ${occupancyPct >= 75 ? 'bg-[var(--status-moderate)]' : 'bg-[var(--status-low)]'}`}
-                  style={{ width: `${occupancyPct}%` }}
-                />
-              </div>
-              <span className="text-[13px] font-medium tabular-nums" style={{ color: 'var(--muted-foreground)' }}>{occupancyPct}%</span>
+            <div className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} />
+              <span className="text-[13px] font-medium tabular-nums" style={{ color: 'var(--muted-foreground)' }}>
+                {totalClients} online
+              </span>
             </div>
           </div>
 
-          <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
-            {sortedSpaces.length === 0 && (
-              <p className="text-[13px] py-3 px-1" style={{ color: 'var(--muted-foreground)' }}>No spaces match "{query}".</p>
+          <div className="flex gap-3">
+            {filtered.length === 0 && (
+              <p className="text-[13px] py-3 px-1" style={{ color: 'var(--muted-foreground)' }}>No buildings match "{query}".</p>
             )}
-            {sortedSpaces.map((space) => (
-              <Link key={space.id} to={`/student/space/${space.id}`} className="flex-shrink-0 w-52 rounded-xl p-3 border transition-colors" style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
-                <div className="flex items-start justify-between mb-2">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-semibold text-[13px] leading-snug truncate mb-0.5" style={{ color: 'var(--foreground)' }}>{space.name}</h4>
-                    <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>{distanceTo(userPos, space.lat, space.lng)} away</p>
+            {filtered.map((building) => {
+              const status = getOccupancyStatus(building.clientCount);
+              return (
+                <button
+                  key={building.code}
+                  type="button"
+                  onClick={() => navigate(`/student/building/${building.code}`)}
+                  className="flex-1 rounded-xl p-3.5 border transition-all text-left"
+                  style={{ background: 'var(--background)', borderColor: 'var(--border)' }}
+                >
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--primary) 10%, transparent)' }}>
+                      <Building2 className="w-5 h-5" style={{ color: 'var(--primary)' }} strokeWidth={1.8} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-[14px] leading-snug" style={{ color: 'var(--foreground)' }}>{building.name}</h4>
+                      <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
+                        {building.floors.length} floors
+                        {userPos ? ` · ${distanceTo(userPos, building.lat, building.lng)}` : ''}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${statusDot[space.status]}`} />
-                    <span className="text-[10px] font-medium" style={{ color: 'var(--muted-foreground)' }}>{statusLabel[space.status]}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
+                      <span className="text-[12px] font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                        {status.label}
+                      </span>
+                    </div>
+                    <span className="text-[12px] font-semibold tabular-nums" style={{ color: 'var(--foreground)' }}>
+                      {building.clientCount} <span className="font-normal" style={{ color: 'var(--muted-foreground)' }}>devices</span>
+                    </span>
                   </div>
-                </div>
-                <div className="mb-2">
-                  <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-                    <div className={`h-full rounded-full ${statusBar[space.status]}`} style={{ width: `${(space.occupancy / space.capacity) * 100}%` }} />
-                  </div>
-                  <p className="text-[11px] mt-1" style={{ color: 'var(--muted-foreground)' }}>{space.occupancy}/{space.capacity} seats</p>
-                </div>
-                <div className="flex gap-1.5 items-center">
-                  {space.amenities.includes('wifi') && <div className="w-6 h-6 rounded-lg flex items-center justify-center border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}><Wifi className="w-3 h-3" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} /></div>}
-                  {space.amenities.includes('outlets') && <div className="w-6 h-6 rounded-lg flex items-center justify-center border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}><Zap className="w-3 h-3" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} /></div>}
-                  {space.amenities.includes('quiet') && <div className="w-6 h-6 rounded-lg flex items-center justify-center border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}><Volume2 className="w-3 h-3" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} /></div>}
-                  <ChevronRight className="w-3.5 h-3.5 ml-auto" style={{ color: 'color-mix(in srgb, var(--muted-foreground) 50%, transparent)' }} strokeWidth={1.5} />
-                </div>
-              </Link>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

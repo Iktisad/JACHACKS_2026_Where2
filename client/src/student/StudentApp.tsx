@@ -5,6 +5,7 @@ import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { SpaceDetail } from './pages/SpaceDetail';
 import { MapView } from './pages/MapView';
+import { BuildingHeatmap } from './pages/BuildingHeatmap';
 import { Session } from './pages/Session';
 import { Leaderboard } from './pages/Leaderboard';
 import { Profile } from './pages/Profile';
@@ -28,6 +29,7 @@ export function StudentApp() {
             <Route index           element={<Home />} />
             <Route path="space/:id" element={<SpaceDetail />} />
             <Route path="map"       element={<MapView />} />
+            <Route path="building/:code" element={<BuildingHeatmap />} />
             <Route path="session"   element={<Session />} />
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="profile"   element={<Profile />} />
