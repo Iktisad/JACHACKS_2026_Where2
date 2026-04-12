@@ -10,7 +10,7 @@ export function AdminLayout() {
     <div className="min-h-screen flex" style={{ fontFamily: 'var(--font-family)' }}>
       {isDesktop && <AdminSidebar />}
 
-      <main className={`flex-1 min-w-0 ${isDesktop ? '' : 'pb-20'} overflow-x-hidden`}>
+      <main className={`flex-1 min-w-0 ${isDesktop ? '' : 'pb-24'} overflow-x-hidden`}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
           <Outlet />
         </div>

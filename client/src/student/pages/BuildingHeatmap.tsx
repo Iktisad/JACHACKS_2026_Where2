@@ -64,7 +64,7 @@ export function BuildingHeatmap() {
   }
 
   return (
-    <div className="flex flex-col" style={{ background: 'var(--background)', minHeight: isDesktop ? '100vh' : 'calc(100vh - 60px)' }}>
+    <div className="flex flex-col" style={{ background: 'var(--background)', minHeight: isDesktop ? '100vh' : 'calc(100dvh - 64px)' }}>
       {/* Header */}
       <div className="shrink-0 border-b px-4 py-3" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-3">
@@ -90,30 +90,27 @@ export function BuildingHeatmap() {
         </div>
 
         {/* Stats bar */}
-        <div className="flex items-center gap-4 mt-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3">
           <div className="flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} />
-            <span className="text-[12px]" style={{ color: 'var(--muted-foreground)' }}>Building total</span>
+            <Users className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} />
+            <span className="text-[12px] whitespace-nowrap" style={{ color: 'var(--muted-foreground)' }}>Building</span>
             <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'var(--foreground)' }}>{buildingTotal}</span>
           </div>
-          <div className="w-px h-4" style={{ background: 'var(--border)' }} />
+          <div className="hidden sm:block w-px h-4" style={{ background: 'var(--border)' }} />
           <div className="flex items-center gap-1.5">
-            <Wifi className="w-3.5 h-3.5" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} />
-            <span className="text-[12px]" style={{ color: 'var(--muted-foreground)' }}>This floor</span>
+            <Wifi className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} />
+            <span className="text-[12px] whitespace-nowrap" style={{ color: 'var(--muted-foreground)' }}>Floor</span>
             <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'var(--foreground)' }}>{totalWireless}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Radio className="w-3.5 h-3.5" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} />
-            <span className="text-[12px]" style={{ color: 'var(--muted-foreground)' }}>Wired</span>
+            <Radio className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} />
+            <span className="text-[12px] whitespace-nowrap" style={{ color: 'var(--muted-foreground)' }}>Wired</span>
             <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'var(--foreground)' }}>{totalWired}</span>
           </div>
           {polledAt && (
-            <>
-              <div className="ml-auto" />
-              <span className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
-                Data from {new Date(polledAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </>
+            <span className="text-[11px] ml-auto" style={{ color: 'var(--muted-foreground)' }}>
+              {new Date(polledAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
           )}
         </div>
 

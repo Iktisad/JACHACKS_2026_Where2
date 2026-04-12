@@ -61,7 +61,7 @@ export function SpaceDetail() {
   };
 
   const progress = sessionTime > 0 ? Math.min((sessionTime / 7200) * 100, 100) : 0;
-  const R = 88;
+  const R = 44; // percentage-based: works with viewBox 100x100
   const circ = 2 * Math.PI * R;
 
   return (
@@ -77,7 +77,7 @@ export function SpaceDetail() {
       </div>
 
       <div className="pb-10 max-w-2xl mx-auto">
-        <div className="relative h-52 overflow-hidden" style={{ background: 'var(--muted)' }}>
+        <div className="relative h-40 sm:h-52 md:h-64 overflow-hidden" style={{ background: 'var(--muted)' }}>
           <ImageWithFallback src={space.imageUrl} alt={space.name} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
           <div className="absolute bottom-4 left-4">
@@ -154,13 +154,13 @@ export function SpaceDetail() {
             <h3 className="text-[13px] font-semibold mb-5 text-center uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
               Study Session
             </h3>
-            <div className="relative w-44 h-44 mx-auto mb-6">
-              <svg className="w-full h-full -rotate-90">
-                <circle cx="88" cy="88" r={R} stroke="var(--border)" strokeWidth="10" fill="none" />
+            <div className="relative w-36 h-36 sm:w-44 sm:h-44 mx-auto mb-6">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r={R} stroke="var(--border)" strokeWidth="5" fill="none" />
                 <circle
-                  cx="88" cy="88" r={R}
+                  cx="50" cy="50" r={R}
                   stroke="var(--primary)"
-                  strokeWidth="10"
+                  strokeWidth="5"
                   fill="none"
                   strokeDasharray={circ}
                   strokeDashoffset={circ * (1 - progress / 100)}
@@ -169,10 +169,10 @@ export function SpaceDetail() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <div className="text-[28px] font-semibold tabular-nums tracking-tight" style={{ color: 'var(--foreground)' }}>
+                <div className="text-[22px] sm:text-[28px] font-semibold tabular-nums tracking-tight" style={{ color: 'var(--foreground)' }}>
                   {formatTime(sessionTime)}
                 </div>
-                <div className="text-[12px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                <div className="text-[11px] sm:text-[12px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
                   {sessionActive ? 'In session' : 'Not started'}
                 </div>
               </div>

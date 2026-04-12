@@ -95,15 +95,15 @@ export function Leaderboard() {
           className="rounded-3xl border shadow-xl overflow-hidden mb-4"
           style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
         >
-          <div className="flex items-end justify-center gap-0 px-4 pt-6">
+          <div className="flex items-end justify-center gap-0 px-2 sm:px-4 pt-6">
             {podiumOrder.map((entry, vi) => {
               if (!entry) return null;
               const isFirst  = entry.rank === 1;
               const isSecond = entry.rank === 2;
               const isThird  = entry.rank === 3;
               const avatarBg = AVATAR_BG[(entry.rank - 1) % AVATAR_BG.length];
-              const colHeight = isFirst ? 'h-44' : isSecond ? 'h-32' : 'h-28';
-              const avatarSize = isFirst ? 'w-[72px] h-[72px]' : 'w-14 h-14';
+              const colHeight = isFirst ? 'h-36 sm:h-44' : isSecond ? 'h-28 sm:h-32' : 'h-24 sm:h-28';
+              const avatarSize = isFirst ? 'w-14 h-14 sm:w-[72px] sm:h-[72px]' : 'w-11 h-11 sm:w-14 sm:h-14';
               const mountOffset = isFirst ? '-mt-4' : isSecond ? 'mt-2' : 'mt-4';
               const MedalIcon = isFirst ? Crown : isSecond ? Medal : Award;
               const medalColor = isFirst ? 'text-primary' : isSecond ? 'text-primary/70' : 'text-primary/45';
@@ -135,13 +135,13 @@ export function Leaderboard() {
                       </div>
                     )}
                   </div>
-                  <p className="text-[11px] font-semibold mb-1.5 leading-tight truncate max-w-[80px] text-center" style={{ color: 'var(--foreground)' }}>
+                  <p className="text-[11px] font-semibold mb-1.5 leading-tight truncate max-w-20 text-center" style={{ color: 'var(--foreground)' }}>
                     {entry.name.split(' ')[0]}
                     {entry.isCurrentUser && <span className="block text-[10px] font-semibold" style={{ color: 'var(--primary)' }}>(you)</span>}
                   </p>
-                  <div className={`w-full ${colHeight} ${podiumBg} rounded-t-xl flex flex-col items-center justify-start pt-3 gap-1`}>
-                    <MedalIcon className={`w-4 h-4 ${medalColor}`} strokeWidth={1.8} />
-                    <div className={`font-bold tabular-nums ${isFirst ? 'text-[20px]' : 'text-[17px]'}`} style={{ color: 'var(--foreground)' }}>{entry.tokens}</div>
+                  <div className={`w-full ${colHeight} ${podiumBg} rounded-t-xl flex flex-col items-center justify-start pt-2.5 sm:pt-3 gap-1`}>
+                    <MedalIcon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${medalColor}`} strokeWidth={1.8} />
+                    <div className={`font-bold tabular-nums ${isFirst ? 'text-[16px] sm:text-[20px]' : 'text-[14px] sm:text-[17px]'}`} style={{ color: 'var(--foreground)' }}>{entry.tokens}</div>
                     <div className="text-[10px] font-medium flex items-center gap-0.5" style={{ color: 'var(--muted-foreground)' }}>
                       <Coins className="w-2.5 h-2.5" strokeWidth={1.8} />
                       tokens

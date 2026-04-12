@@ -29,7 +29,7 @@ export function Session() {
 
   const progress = sessionTime > 0 ? Math.min((sessionTime / 7200) * 100, 100) : 0;
   const tokensEarned = Math.floor(sessionTime / 360);
-  const R = 120;
+  const R = 44; // percentage-based: works with viewBox 100x100
   const circ = 2 * Math.PI * R;
 
   async function endSession() {
@@ -89,14 +89,14 @@ export function Session() {
           </div>
         )}
 
-        <div className="rounded-2xl px-6 py-8 border shadow-sm" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-          <div className="relative w-64 h-64 mx-auto mb-7">
-            <svg className="w-full h-full -rotate-90">
-              <circle cx="128" cy="128" r={R} stroke="var(--border)" strokeWidth="14" fill="none" />
+        <div className="rounded-2xl px-4 sm:px-6 py-6 sm:py-8 border shadow-sm" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+          <div className="relative w-48 h-48 sm:w-64 sm:h-64 mx-auto mb-7">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r={R} stroke="var(--border)" strokeWidth="5" fill="none" />
               <circle
-                cx="128" cy="128" r={R}
+                cx="50" cy="50" r={R}
                 stroke="var(--primary)"
-                strokeWidth="14"
+                strokeWidth="5"
                 fill="none"
                 strokeDasharray={circ}
                 strokeDashoffset={circ * (1 - progress / 100)}
@@ -105,10 +105,10 @@ export function Session() {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="text-[42px] font-semibold tabular-nums tracking-tight leading-none" style={{ color: 'var(--foreground)' }}>
+              <div className="text-[28px] sm:text-[42px] font-semibold tabular-nums tracking-tight leading-none" style={{ color: 'var(--foreground)' }}>
                 {formatTime(sessionTime)}
               </div>
-              <div className="text-[13px] mt-2" style={{ color: 'var(--muted-foreground)' }}>
+              <div className="text-[11px] sm:text-[13px] mt-1.5 sm:mt-2" style={{ color: 'var(--muted-foreground)' }}>
                 {sessionActive ? 'In Progress' : 'Ready to Start'}
               </div>
               {sessionActive && tokensEarned > 0 && (

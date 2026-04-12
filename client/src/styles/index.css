@@ -243,3 +243,91 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ── Safe area insets for notched devices ────────────────────── */
+.pt-safe { padding-top: max(0px, env(safe-area-inset-top)); }
+.pl-safe { padding-left: max(0px, env(safe-area-inset-left)); }
+.pr-safe { padding-right: max(0px, env(safe-area-inset-right)); }
+
+/* ── Touch-friendly targets ─────────────────────────────────── */
+@layer base {
+  /* Prevent iOS zoom on input focus */
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* ── Responsive typography ──────────────────────────────────── */
+@media (max-width: 359px) {
+  /* Very small phones (iPhone SE 1st gen, Galaxy S mini) */
+  html { font-size: 14px; }
+}
+@media (min-width: 360px) and (max-width: 413px) {
+  /* Standard phones */
+  html { font-size: 15px; }
+}
+@media (min-width: 414px) and (max-width: 767px) {
+  /* Large phones (Plus / Max / Pro Max) */
+  html { font-size: 16px; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Tablets */
+  html { font-size: 16px; }
+}
+@media (min-width: 1024px) {
+  /* Desktop */
+  html { font-size: 16px; }
+}
+
+/* ── Landscape mode adjustments ─────────────────────────────── */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Phones in landscape — reduce vertical padding */
+  .landscape-compact-py {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+}
+
+/* ── Tablet layout helpers ──────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tablet\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tablet\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tablet\:px-8 { padding-left: 2rem; padding-right: 2rem; }
+  .tablet\:max-w-2xl { max-width: 42rem; }
+}
+
+/* ── PWA standalone mode ────────────────────────────────────── */
+@media (display-mode: standalone) {
+  /* Extra top padding when running as installed PWA (status bar overlap) */
+  .pwa-pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── High contrast mode support ─────────────────────────────── */
+@media (prefers-contrast: high) {
+  :root {
+    --border: #0e3249;
+    --muted-foreground: #164863;
+  }
+  .dark {
+    --border: #427D9D;
+    --muted-foreground: #9BBEC8;
+  }
+}
+
+/* ── Print styles ───────────────────────────────────────────── */
+@media print {
+  nav, .fixed, .sticky, button { display: none !important; }
+  body { background: white !important; color: black !important; }
+}

@@ -161,7 +161,7 @@ export function MapView() {
     : buildingClients;
 
   return (
-    <div className="flex flex-col" style={{ background: 'var(--background)', height: isDesktop ? '100vh' : 'calc(100vh - 60px)' }}>
+    <div className="flex flex-col" style={{ background: 'var(--background)', height: isDesktop ? '100vh' : 'calc(100dvh - 64px)' }}>
       <div className="flex-1 relative min-h-0">
         {/* Search bar */}
         <div className="absolute top-4 left-4 right-4 z-[1000]">
@@ -185,7 +185,7 @@ export function MapView() {
           </div>
         )}
 
-        {accuracy !== null && (
+        {accuracy !== null && !geoError && (
           <div className="absolute top-[68px] right-4 z-[1000] rounded-full px-2.5 py-1 text-[11px] shadow border" style={{ background: 'color-mix(in srgb, var(--card) 90%, transparent)', borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}>
             GPS ±{accuracy}m
           </div>
@@ -260,7 +260,7 @@ export function MapView() {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar">
             {filtered.length === 0 && (
               <p className="text-[13px] py-3 px-1" style={{ color: 'var(--muted-foreground)' }}>No buildings match "{query}".</p>
             )}
@@ -271,7 +271,7 @@ export function MapView() {
                   key={building.code}
                   type="button"
                   onClick={() => navigate(`/student/building/${building.code}`)}
-                  className="flex-1 rounded-xl p-3.5 border transition-all text-left"
+                  className="flex-1 min-w-40 rounded-xl p-3.5 border transition-all text-left"
                   style={{ background: 'var(--background)', borderColor: 'var(--border)' }}
                 >
                   <div className="flex items-center gap-2.5 mb-2.5">

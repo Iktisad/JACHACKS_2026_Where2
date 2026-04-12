@@ -10,7 +10,7 @@ export function Layout() {
     <div className="min-h-screen flex" style={{ fontFamily: 'var(--font-family)' }}>
       {isDesktop && <DesktopSidebar />}
 
-      <main className={`flex-1 ${isDesktop ? '' : 'pb-20'} overflow-x-hidden`}>
+      <main className={`flex-1 ${isDesktop ? '' : 'pb-24'} overflow-x-hidden`}>
         <Outlet />
       </main>
 

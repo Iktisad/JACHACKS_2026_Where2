@@ -20,6 +20,14 @@ export function useMediaQuery(query: string): boolean {
   return matches;
 }
 
+export function useIsTablet() {
+  return useMediaQuery('(min-width: 768px)');
+}
+
 export function useIsDesktop() {
   return useMediaQuery('(min-width: 1024px)');
+}
+
+export function useIsLandscape() {
+  return useMediaQuery('(orientation: landscape) and (max-height: 500px)');
 }

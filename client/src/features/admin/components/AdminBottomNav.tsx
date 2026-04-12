@@ -22,10 +22,10 @@ export function AdminBottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t z-50 pb-safe"
+      className="fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t z-50 pb-safe pl-safe pr-safe"
       style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
     >
-      <div className="flex items-center justify-around max-w-[600px] mx-auto px-1" style={{ height: '60px' }}>
+      <div className="flex items-center justify-around max-w-[600px] mx-auto px-2 sm:px-4" style={{ height: '64px' }}>
         {navItems.map((item, index) => {
           const isActive =
             item.path === '/admin'

@@ -1,11 +1,14 @@
 {
-  "name": "ITS Challenge",
-  "short_name": "ITS",
-  "description": "ITS Challenge Application",
+  "name": "ITS Challenge — Study Space Finder",
+  "short_name": "ITS Challenge",
+  "description": "Find open study spaces, check real-time occupancy, and earn tokens at John Abbott College.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#5994AD",
+  "orientation": "any",
+  "background_color": "#eef7fc",
+  "theme_color": "#164863",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "/icons/favicon-16x16.png",
@@ -25,13 +28,20 @@
     {
       "src": "/icons/android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icons/android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
