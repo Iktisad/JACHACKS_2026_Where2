@@ -19,19 +19,66 @@ export class HeatmapController {
     try {
       const siteId = req.query['site_id'] as string | undefined;
       const db = this.db.getKnex();
-      // Find the most recent epoch that has actual client data.
-      // Multiple sites poll seconds apart, so we pick the latest epoch
-      // with non-zero totals to avoid returning a batch of zeros.
-      const latestRow = await db('ap_snapshots')
-        .select('epoch')
-        .groupBy('epoch')
-        .orderBy('epoch', 'desc')
-        .havingRaw('SUM(client_count) + SUM(wired_client_count) > 0')
-        .first();
 
-      // Fall back to absolute latest if everything is genuinely zero
-      const latestEpoch = latestRow?.epoch
-        ?? (await db('ap_snapshots').max('epoch as epoch').first())?.epoch;
+      // Pick the most recent epoch whose data is both *complete* (every known
+      // AP has a snapshot row) and *non-zero* (at least one client somewhere).
+      // The poller writes all sites in a single transaction, so partial epochs
+      // shouldn't appear — but the completeness check is a safety net.
+      let apCountQ = db('access_points');
+      if (siteId) apCountQ = apCountQ.where('site_id', siteId);
+      const apCountRow = await apCountQ.count('* as count').first();
+      const expectedApCount = Number(apCountRow?.count ?? 0);
+
+      // Also grab the absolute latest epoch for diagnostics
+      const maxEpochRow = await db('ap_snapshots').max('epoch as epoch').first();
+      const absoluteLatest = maxEpochRow?.epoch;
+
+      let latestEpoch: number | undefined;
+      let pickedBy = 'none';
+
+      if (expectedApCount > 0) {
+        // Primary: latest epoch that is complete AND has non-zero totals
+        let completenessQ = db('ap_snapshots as s')
+          .join('access_points as ap', 'ap.id', 's.ap_id')
+          .select('s.epoch')
+          .groupBy('s.epoch')
+          .havingRaw(
+            'COUNT(DISTINCT s.ap_id) >= ? AND SUM(s.client_count) + SUM(s.wired_client_count) > 0',
+            [expectedApCount],
+          )
+          .orderBy('s.epoch', 'desc');
+        if (siteId) completenessQ = completenessQ.where('ap.site_id', siteId);
+        const completeRow = await completenessQ.first();
+        if (completeRow?.epoch) {
+          latestEpoch = completeRow.epoch;
+          pickedBy = 'complete+nonzero';
+        }
+      }
+
+      // Fallback: latest epoch with non-zero totals (covers first poll / AP count mismatch)
+      if (!latestEpoch) {
+        const fallbackRow = await db('ap_snapshots')
+          .select('epoch')
+          .groupBy('epoch')
+          .havingRaw('SUM(client_count) + SUM(wired_client_count) > 0')
+          .orderBy('epoch', 'desc')
+          .first();
+        if (fallbackRow?.epoch) {
+          latestEpoch = fallbackRow.epoch;
+          pickedBy = 'nonzero-fallback';
+        }
+      }
+
+      // Last resort: absolute latest epoch (everything genuinely zero)
+      if (!latestEpoch) {
+        latestEpoch = absoluteLatest;
+        pickedBy = 'last-resort';
+      }
+
+      console.log(
+        `[heatmap] getCurrent: expectedAPs=${expectedApCount}, absoluteLatest=${absoluteLatest}, ` +
+        `pickedEpoch=${latestEpoch} (${pickedBy}), age=${absoluteLatest && latestEpoch ? absoluteLatest - latestEpoch : '?'}s behind`,
+      );
 
       if (!latestEpoch) {
         res.json([]);
@@ -51,7 +98,13 @@ export class HeatmapController {
           db.raw('? as epoch', [latestEpoch]),
         );
       if (siteId) q = q.where('ap.site_id', siteId);
-      res.json(await q);
+      const rows = await q;
+
+      // Log totals for diagnostics
+      const totalC = rows.reduce((s: number, r: any) => s + Number(r.client_count) + Number(r.wired_client_count), 0);
+      console.log(`[heatmap] getCurrent: serving ${rows.length} APs, totalClients=${totalC}, epoch=${latestEpoch}`);
+
+      res.json(rows);
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }
