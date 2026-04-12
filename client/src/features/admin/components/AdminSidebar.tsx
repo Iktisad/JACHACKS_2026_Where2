@@ -6,8 +6,8 @@ import { ThemeToggle } from './ThemeToggle';
 
 const navItems = [
   { path: '/admin',         icon: LayoutDashboard, label: 'Dashboard'    },
-  { path: '/admin/heatmap', icon: Flame,           label: 'Live Heatmap' },
   { path: '/admin/history', icon: History,         label: 'History'      },
+  { path: '/admin/heatmap', icon: Flame,           label: 'Live Heatmap' },
 ];
 
 export function AdminSidebar() {

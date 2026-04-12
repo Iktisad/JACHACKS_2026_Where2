@@ -10,7 +10,7 @@ export function DesktopSidebar() {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { path: '/student',            icon: LayoutDashboard, label: 'Dashboard'   },
+    { path: '/student',            icon: LayoutDashboard, label: 'Home'        },
     { path: '/student/map',        icon: Map,             label: 'Map'         },
     { path: '/student/session',    icon: Timer,           label: 'Session'     },
     { path: '/student/leaderboard',icon: Trophy,          label: 'Leaderboard' },

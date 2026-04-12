@@ -5,6 +5,16 @@ export default function RoleSelectPage() {
   const navigate = useNavigate()
   const [hovered, setHovered] = useState<'student' | 'admin' | null>(null)
 
+  function handleStudentCredentials(e: React.MouseEvent) {
+    e.stopPropagation()
+    navigate('/student/login?prefill=1')
+  }
+
+  function handleAdminCredentials(e: React.MouseEvent) {
+    e.stopPropagation()
+    navigate('/admin/login?prefill=1')
+  }
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row overflow-hidden" style={{ background: 'var(--background)' }}>
 
@@ -15,11 +25,11 @@ export default function RoleSelectPage() {
         onMouseLeave={() => setHovered(null)}
         className="relative flex-1 flex flex-col items-center justify-center text-left cursor-pointer border-0 outline-none transition-all duration-500"
         style={{
-          minHeight: '50vh',
+          minHeight: '48vh',
           background: hovered === 'student'
             ? 'linear-gradient(145deg, #1a5276 0%, #2e86c1 60%, #5dade2 100%)'
             : 'linear-gradient(145deg, #164863 0%, #427D9D 60%, #9BBEC8 100%)',
-          padding: '3rem 2.5rem',
+          padding: '2.5rem 1.5rem',
         }}
       >
         {/* Background pattern */}
@@ -58,10 +68,10 @@ export default function RoleSelectPage() {
         <div className="relative z-10 flex flex-col items-center text-center max-w-xs">
           {/* Icon */}
           <div
-            className="flex items-center justify-center rounded-2xl mb-7 transition-all duration-300"
+            className="flex items-center justify-center rounded-2xl mb-5 transition-all duration-300"
             style={{
-              width: 80,
-              height: 80,
+              width: 68,
+              height: 68,
               background: 'rgba(255,255,255,0.15)',
               backdropFilter: 'blur(8px)',
               border: '1px solid rgba(255,255,255,0.2)',
@@ -69,7 +79,7 @@ export default function RoleSelectPage() {
               boxShadow: hovered === 'student' ? '0 20px 40px rgba(0,0,0,0.2)' : 'none',
             }}
           >
-            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
               <path d="M6 12v5c3 3 9 3 12 0v-5" />
             </svg>
@@ -77,16 +87,16 @@ export default function RoleSelectPage() {
 
           {/* Label */}
           <div
-            className="text-xs font-semibold tracking-widest uppercase mb-3"
+            className="text-xs font-semibold tracking-widest uppercase mb-2"
             style={{ color: 'rgba(221,242,253,0.6)', letterSpacing: '0.15em' }}
           >
             I am a
           </div>
 
           <h2
-            className="font-bold mb-4 transition-all duration-300"
+            className="font-bold mb-3 transition-all duration-300"
             style={{
-              fontSize: '2.75rem',
+              fontSize: 'clamp(2rem, 6vw, 2.75rem)',
               color: '#ffffff',
               lineHeight: 1.1,
               textShadow: hovered === 'student' ? '0 4px 20px rgba(0,0,0,0.3)' : 'none',
@@ -95,12 +105,12 @@ export default function RoleSelectPage() {
             Student
           </h2>
 
-          <p className="text-base leading-relaxed mb-8" style={{ color: 'rgba(221,242,253,0.75)' }}>
+          <p className="text-sm leading-relaxed mb-5 hidden sm:block" style={{ color: 'rgba(221,242,253,0.75)' }}>
             Find open study spaces, check real-time occupancy, and get AI-powered spot recommendations.
           </p>
 
           {/* Features */}
-          <div className="flex flex-col gap-2 w-full mb-8">
+          <div className="flex flex-col gap-1.5 w-full mb-5 hidden sm:flex">
             {['Real-time space availability', 'AI study spot finder', 'Campus leaderboard'].map((feat) => (
               <div key={feat} className="flex items-center gap-2" style={{ color: 'rgba(221,242,253,0.7)' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(221,242,253,0.9)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -113,7 +123,7 @@ export default function RoleSelectPage() {
 
           {/* CTA */}
           <div
-            className="flex items-center gap-2 rounded-xl px-6 py-3 font-semibold text-sm transition-all duration-300"
+            className="flex items-center gap-2 rounded-xl px-5 py-2.5 font-semibold text-sm transition-all duration-300"
             style={{
               background: 'rgba(255,255,255,0.18)',
               border: '1px solid rgba(255,255,255,0.3)',
@@ -128,44 +138,52 @@ export default function RoleSelectPage() {
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </div>
-        </div>
 
-        {/* Divider hint on mobile */}
-        <div
-          className="absolute bottom-0 left-1/2 -translate-x-1/2 lg:hidden"
-          style={{ width: 40, height: 2, background: 'rgba(255,255,255,0.2)', borderRadius: 1 }}
-        />
+          {/* Credentials button */}
+          <button
+            type="button"
+            onClick={handleStudentCredentials}
+            className="mt-2.5 flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold transition-all duration-200"
+            style={{
+              background: 'rgba(255,255,255,0.10)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: 'rgba(221,242,253,0.85)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            Credentials
+          </button>
+        </div>
       </button>
 
       {/* ── Center Divider / Logo ─────────────────────────────── */}
       <div
         className="relative z-20 flex items-center justify-center lg:flex-col"
-        style={{ flexShrink: 0 }}
+        style={{ flexShrink: 0, height: 0, overflow: 'visible' }}
       >
         {/* Vertical line on desktop */}
         <div
-          className="hidden lg:block absolute inset-y-0 left-1/2 -translate-x-1/2"
-          style={{ width: 1, background: 'rgba(155,190,200,0.25)' }}
-        />
-        {/* Horizontal line on mobile */}
-        <div
-          className="lg:hidden absolute inset-x-0 top-1/2 -translate-y-1/2"
-          style={{ height: 1, background: 'rgba(155,190,200,0.25)' }}
+          className="hidden lg:block absolute"
+          style={{ width: 1, top: '-100vh', bottom: '-100vh', left: '50%', transform: 'translateX(-50%)', background: 'rgba(155,190,200,0.25)' }}
         />
 
         {/* Logo badge */}
         <div
           className="relative z-10 flex flex-col items-center justify-center"
           style={{
-            width: 72,
-            height: 72,
+            width: 60,
+            height: 60,
             borderRadius: '50%',
             background: 'var(--background)',
             border: '1px solid var(--border)',
             boxShadow: '0 4px 24px rgba(22,72,99,0.12)',
           }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
@@ -179,11 +197,11 @@ export default function RoleSelectPage() {
         onMouseLeave={() => setHovered(null)}
         className="relative flex-1 flex flex-col items-center justify-center text-left cursor-pointer border-0 outline-none transition-all duration-500"
         style={{
-          minHeight: '50vh',
+          minHeight: '48vh',
           background: hovered === 'admin'
             ? 'linear-gradient(145deg, #f0f4f8 0%, #e2edf5 60%, #cde0ed 100%)'
             : 'linear-gradient(145deg, #f7fbfd 0%, #eef7fc 60%, #ddf2fd 100%)',
-          padding: '3rem 2.5rem',
+          padding: '2.5rem 1.5rem',
         }}
       >
         {/* Background pattern */}
@@ -222,10 +240,10 @@ export default function RoleSelectPage() {
         <div className="relative z-10 flex flex-col items-center text-center max-w-xs">
           {/* Icon */}
           <div
-            className="flex items-center justify-center rounded-2xl mb-7 transition-all duration-300"
+            className="flex items-center justify-center rounded-2xl mb-5 transition-all duration-300"
             style={{
-              width: 80,
-              height: 80,
+              width: 68,
+              height: 68,
               background: 'var(--primary)',
               boxShadow: hovered === 'admin'
                 ? '0 20px 40px rgba(22,72,99,0.35)'
@@ -233,7 +251,7 @@ export default function RoleSelectPage() {
               transform: hovered === 'admin' ? 'scale(1.08) translateY(-4px)' : 'scale(1)',
             }}
           >
-            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="7" height="7" rx="1" />
               <rect x="14" y="3" width="7" height="7" rx="1" />
               <rect x="14" y="14" width="7" height="7" rx="1" />
@@ -243,16 +261,16 @@ export default function RoleSelectPage() {
 
           {/* Label */}
           <div
-            className="text-xs font-semibold tracking-widest uppercase mb-3"
+            className="text-xs font-semibold tracking-widest uppercase mb-2"
             style={{ color: 'var(--muted-foreground)', letterSpacing: '0.15em' }}
           >
             I am an
           </div>
 
           <h2
-            className="font-bold mb-4 transition-all duration-300"
+            className="font-bold mb-3 transition-all duration-300"
             style={{
-              fontSize: '2.75rem',
+              fontSize: 'clamp(2rem, 6vw, 2.75rem)',
               color: 'var(--primary)',
               lineHeight: 1.1,
             }}
@@ -260,12 +278,12 @@ export default function RoleSelectPage() {
             Admin
           </h2>
 
-          <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--muted-foreground)' }}>
+          <p className="text-sm leading-relaxed mb-5 hidden sm:block" style={{ color: 'var(--muted-foreground)' }}>
             Monitor network heatmaps, view client history, and manage campus Wi-Fi infrastructure.
           </p>
 
           {/* Features */}
-          <div className="flex flex-col gap-2 w-full mb-8">
+          <div className="hidden sm:flex flex-col gap-1.5 w-full mb-5">
             {['Live network heatmaps', 'Client connection history', 'Infrastructure analytics'].map((feat) => (
               <div key={feat} className="flex items-center gap-2" style={{ color: 'var(--muted-foreground)' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -278,7 +296,7 @@ export default function RoleSelectPage() {
 
           {/* CTA */}
           <div
-            className="flex items-center gap-2 rounded-xl px-6 py-3 font-semibold text-sm transition-all duration-300"
+            className="flex items-center gap-2 rounded-xl px-5 py-2.5 font-semibold text-sm transition-all duration-300"
             style={{
               background: 'var(--primary)',
               color: '#ffffff',
@@ -293,18 +311,26 @@ export default function RoleSelectPage() {
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </div>
+
+          {/* Credentials button */}
+          <button
+            type="button"
+            onClick={handleAdminCredentials}
+            className="mt-2.5 flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold transition-all duration-200"
+            style={{
+              background: 'rgba(22,72,99,0.08)',
+              border: '1px solid rgba(22,72,99,0.18)',
+              color: 'var(--primary)',
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            Credentials
+          </button>
         </div>
       </button>
-
-      {/* ── Logo footer ───────────────────────────────────────── */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30">
-        <img
-          src="/icons/web logo.svg"
-          alt="WhereTo"
-          className="h-30 w-auto object-contain"
-          style={{ opacity: 0.45 }}
-        />
-      </div>
     </div>
   )
 }

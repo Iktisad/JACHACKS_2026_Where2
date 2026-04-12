@@ -6,8 +6,8 @@ import { ThemeToggle } from './ThemeToggle';
 
 const navItems = [
   { path: '/admin',         icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/admin/heatmap', icon: Flame,           label: 'Heatmap'   },
   { path: '/admin/history', icon: History,         label: 'History'   },
+  { path: '/admin/heatmap', icon: Flame,           label: 'Heatmap'   },
 ];
 
 export function AdminBottomNav() {
@@ -32,7 +32,7 @@ export function AdminBottomNav() {
               ? location.pathname === '/admin'
               : location.pathname.startsWith(item.path);
           const Icon = item.icon;
-          const isCenter = index === 1;
+          const isCenter = index === 2;
 
           return (
             <Link
@@ -45,9 +45,9 @@ export function AdminBottomNav() {
                   whileTap={{ scale: 0.88 }}
                   className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
                   style={{
-                    background: 'var(--primary)',
-                    color: 'var(--primary-foreground)',
-                    boxShadow: '0 4px 14px color-mix(in srgb, var(--primary) 30%, transparent)',
+                    background: '#0f172a',
+                    color: '#f97316',
+                    boxShadow: '0 4px 18px rgba(249,115,22,0.35)',
                   }}
                 >
                   <Icon className="w-6 h-6" strokeWidth={2} />

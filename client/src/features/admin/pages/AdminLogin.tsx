@@ -1,16 +1,21 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 
+const DEMO_EMAIL = 'admin@johnabbott.qc.ca';
+const DEMO_PASSWORD = 'admin123';
+
 export function AdminLogin() {
   const { login } = useAdminAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const prefill = searchParams.get('prefill') === '1';
+  const [email, setEmail] = useState(prefill ? DEMO_EMAIL : '');
+  const [password, setPassword] = useState(prefill ? DEMO_PASSWORD : '');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,11 +194,13 @@ export function AdminLogin() {
           </form>
         </motion.div>
 
-        <motion.div
+        <motion.button
+          type="button"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.25 }}
-          className="mt-5 rounded-2xl border px-4 py-3"
+          onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASSWORD); }}
+          className="w-full mt-4 rounded-2xl border px-4 py-3 text-left transition-colors hover:opacity-80"
           style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}
         >
           <p className="text-[11px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--muted-foreground)' }}>
@@ -202,14 +209,15 @@ export function AdminLogin() {
           <div className="space-y-1">
             <p className="text-[12px]" style={{ color: 'var(--foreground)' }}>
               <span style={{ color: 'var(--muted-foreground)' }}>Email:</span>{' '}
-              admin@johnabbott.qc.ca
+              {DEMO_EMAIL}
             </p>
             <p className="text-[12px]" style={{ color: 'var(--foreground)' }}>
               <span style={{ color: 'var(--muted-foreground)' }}>Password:</span>{' '}
-              admin123
+              {DEMO_PASSWORD}
             </p>
           </div>
-        </motion.div>
+          <p className="text-[11px] mt-2" style={{ color: 'var(--muted-foreground)' }}>Tap to fill</p>
+        </motion.button>
 
         {/* ── Navigation footer ──────────────────────────────────── */}
         <motion.div

@@ -52,6 +52,7 @@ const USER_KEY      = 'whereto_user';
 const PREFS_KEY     = 'whereto_prefs';
 const USERS_KEY     = 'whereto_mock_users';
 const SESSIONS_KEY  = 'whereto_sessions';
+export const SHARED_DARK_KEY = 'whereto_dark';
 
 function saveLocal(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
@@ -143,11 +144,35 @@ function saveUsers(u: Record<string, StoredUser>) {
   saveLocal(USERS_KEY, u);
 }
 
+const DEMO_SEED: StoredUser = {
+  uid: 'demo@johnabbott.qc.ca',
+  name: 'Demo Student',
+  email: 'demo@johnabbott.qc.ca',
+  avatar: 'DS',
+  tokens: 120,
+  rank: 12,
+  totalSessions: 8,
+  studyHours: 14,
+  spacesVisited: 5,
+  streak: 3,
+  createdAt: '2024-09-01T00:00:00.000Z',
+  passwordHash: simpleHash('demo123'),
+};
+
+function ensureDemoUser() {
+  const users = loadUsers();
+  if (!users[DEMO_SEED.uid]) {
+    users[DEMO_SEED.uid] = DEMO_SEED;
+    saveUsers(users);
+  }
+}
+
 export async function register(
   name: string,
   email: string,
   password: string
 ): Promise<UserProfile> {
+  ensureDemoUser();
   const users = loadUsers();
   const key = email.toLowerCase();
   if (users[key]) throw new Error('An account with this email already exists.');
@@ -168,6 +193,7 @@ export async function register(
 }
 
 export async function login(email: string, password: string): Promise<UserProfile> {
+  ensureDemoUser();
   const users = loadUsers();
   const key = email.toLowerCase();
   const stored = users[key];
@@ -199,11 +225,17 @@ const DEFAULT_PREFS: UserPreferences = {
 };
 
 export function getPreferences(): UserPreferences {
-  return loadLocal<UserPreferences>(PREFS_KEY) ?? DEFAULT_PREFS;
+  const stored = loadLocal<UserPreferences>(PREFS_KEY) ?? { ...DEFAULT_PREFS };
+  // Always read dark mode from the shared key so it stays in sync with admin
+  const sharedDark = localStorage.getItem(SHARED_DARK_KEY);
+  if (sharedDark !== null) stored.darkMode = sharedDark === 'true';
+  return stored;
 }
 
 export async function savePreferences(prefs: UserPreferences): Promise<void> {
   saveLocal(PREFS_KEY, prefs);
+  // Keep the shared dark key in sync so admin side picks it up too
+  localStorage.setItem(SHARED_DARK_KEY, String(!!prefs.darkMode));
   const user = getCurrentUser();
   if (user) pushMessage(`${user.email} updated preferences: ${JSON.stringify(prefs)}`);
 }

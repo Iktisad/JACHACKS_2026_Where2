@@ -39,6 +39,7 @@ import { formatEpoch, formatEpochFull } from '../../shared/utils/formatters';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import ErrorBanner from '../../shared/components/ErrorBanner';
 import type { ApRecord } from '../heatmap/types';
+import { useAdminAuth } from './context/AdminAuthContext';
 
 /* ── Constants ────────────────────────────────────────────────── */
 
@@ -79,8 +80,17 @@ function statusColor(status: 'low' | 'moderate' | 'high') {
 
 /* ── Component ────────────────────────────────────────────────── */
 
+function getTimeGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export default function AdminDashboard() {
   const now = Math.floor(Date.now() / 1000);
+  const { admin } = useAdminAuth();
+  const firstName = admin?.name.split(' ')[0] ?? 'Admin';
 
   /* Live data */
   const { aps, totalWireless, totalWired, loading: heatmapLoading, error: heatmapError, polledAt } = useHeatmap();
@@ -260,10 +270,10 @@ export default function AdminDashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>
-          Dashboard
+          {getTimeGreeting()}, {firstName}!
         </h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-          Campus-wide occupancy overview
+          Here's your campus-wide occupancy overview
           {polledAt && (
             <span className="ml-2">
               &middot; Updated {formatEpochFull(polledAt)}

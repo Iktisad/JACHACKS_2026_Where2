@@ -1,15 +1,20 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Sun, Moon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 
+const DEMO_EMAIL = 'demo@johnabbott.qc.ca';
+const DEMO_PASSWORD = 'demo123';
+
 export function Login() {
   const { login, preferences, savePreferences } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const prefill = searchParams.get('prefill') === '1';
+  const [email, setEmail] = useState(prefill ? DEMO_EMAIL : '');
+  const [password, setPassword] = useState(prefill ? DEMO_PASSWORD : '');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,15 +167,30 @@ export function Login() {
           </div>
         </motion.div>
 
-        <motion.p
+        <motion.button
+          type="button"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.25 }}
-          className="text-center text-[12px] mt-5"
-          style={{ color: 'var(--muted-foreground)' }}
+          onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASSWORD); }}
+          className="w-full mt-4 rounded-2xl border px-4 py-3 text-left transition-colors hover:opacity-80"
+          style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}
         >
-          Demo: register any email + password to get started
-        </motion.p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--muted-foreground)' }}>
+            Demo credentials
+          </p>
+          <div className="space-y-1">
+            <p className="text-[12px]" style={{ color: 'var(--foreground)' }}>
+              <span style={{ color: 'var(--muted-foreground)' }}>Email:</span>{' '}
+              {DEMO_EMAIL}
+            </p>
+            <p className="text-[12px]" style={{ color: 'var(--foreground)' }}>
+              <span style={{ color: 'var(--muted-foreground)' }}>Password:</span>{' '}
+              {DEMO_PASSWORD}
+            </p>
+          </div>
+          <p className="text-[11px] mt-2" style={{ color: 'var(--muted-foreground)' }}>Tap to fill</p>
+        </motion.button>
 
         <motion.div
           initial={{ opacity: 0 }}

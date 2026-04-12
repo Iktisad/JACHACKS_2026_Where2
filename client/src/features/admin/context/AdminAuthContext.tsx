@@ -6,6 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
+import { SHARED_DARK_KEY } from '../../../student/services/backboard';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -27,8 +28,7 @@ interface AdminAuthContextValue {
 // ── Hardcoded admin credentials (localStorage-backed) ──────────
 // In a real app this would be a proper backend check.
 
-const ADMIN_KEY      = 'whereto_admin';
-const ADMIN_DARK_KEY = 'whereto_admin_dark';
+const ADMIN_KEY = 'whereto_admin';
 
 const ADMINS: Record<string, { name: string; password: string }> = {
   'admin@johnabbott.qc.ca': { name: 'ITS Admin', password: 'admin123' },
@@ -55,7 +55,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<AdminProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(() =>
-    localStorage.getItem(ADMIN_DARK_KEY) === 'true'
+    localStorage.getItem(SHARED_DARK_KEY) === 'true'
   );
 
   // Sync dark class on <html> whenever darkMode changes
@@ -71,7 +71,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const toggleDarkMode = useCallback(() => {
     setDarkMode((prev) => {
       const next = !prev;
-      localStorage.setItem(ADMIN_DARK_KEY, String(next));
+      localStorage.setItem(SHARED_DARK_KEY, String(next));
       return next;
     });
   }, []);
