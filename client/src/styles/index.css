@@ -1,3 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
+
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --font-size: 16px;
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* ── Palette: #164863 / #427D9D / #9BBEC8 / #DDF2FD ── */
+  --background: #eef7fc;
+  --foreground: #164863;
+  --card: #ffffff;
+  --card-foreground: #164863;
+  --popover: #ffffff;
+  --popover-foreground: #164863;
+
+  /* Primary = deep ocean blue */
+  --primary: #164863;
+  --primary-light: #427D9D;
+  --primary-dark: #0e3249;
+  --primary-foreground: #DDF2FD;
+
+  --secondary: #427D9D;
+  --secondary-light: #9BBEC8;
+  --secondary-foreground: #ffffff;
+
+  /* Accent = mid blue (interactive highlights) */
+  --accent: #427D9D;
+  --accent-light: #9BBEC8;
+  --accent-foreground: #ffffff;
+
+  /* Amber/gold for tokens and rewards */
+  --warning: #92610a;
+  --warning-light: #b87d14;
+
+  --destructive: #991b1b;
+  --destructive-foreground: #ffffff;
+
+  --muted: #ddf2fd80;
+  --muted-foreground: #427D9D;
+
+  --border: #9BBEC8;
+  --input: transparent;
+  --input-background: #ffffff;
+  --switch-background: #9BBEC8;
+
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --ring: #427D9D;
+
+  --chart-1: #164863;
+  --chart-2: #427D9D;
+  --chart-3: #9BBEC8;
+  --chart-4: #92610a;
+  --chart-5: #427D9D;
+
+  --radius: 1rem;
+  --radius-sm: 0.625rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+
+  --glass-bg: rgba(221, 242, 253, 0.82);
+  --glass-border: rgba(155, 190, 200, 0.35);
+
+  /* Occupancy status */
+  --status-low: #166534;
+  --status-low-bg: #f0fdf4;
+  --status-low-border: #bbf7d0;
+  --status-moderate: #92400e;
+  --status-moderate-bg: #fffbeb;
+  --status-moderate-border: #fde68a;
+  --status-high: #991b1b;
+  --status-high-bg: #fef2f2;
+  --status-high-border: #fecaca;
+
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--muted);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Hero / page-header band — always dark navy */
+  --hero: #164863;
+  --hero-foreground: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-hero: var(--hero);
+  --color-hero-foreground: var(--hero-foreground);
+}
+
+.dark {
+  --hero: #0e2233;
+  --hero-foreground: #ffffff;
+
+  --background: #0e1a24;
+  --foreground: #DDF2FD;
+  --card: #152130;
+  --card-foreground: #DDF2FD;
+  --popover: #152130;
+  --popover-foreground: #DDF2FD;
+  --primary: #9BBEC8;
+  --primary-light: #DDF2FD;
+  --primary-dark: #427D9D;
+  --primary-foreground: #0e1a24;
+  --secondary: #427D9D;
+  --secondary-foreground: #DDF2FD;
+  --accent: #427D9D;
+  --accent-foreground: #DDF2FD;
+  --muted: #1e2f3e;
+  --muted-foreground: #7aabb8;
+  --border: #1e3248;
+  --input-background: #152130;
+  --switch-background: #1e3248;
+  --ring: #427D9D;
+
+  --warning: #c48a1a;
+  --warning-light: #d9a030;
+
+  --destructive: #e05555;
+  --destructive-foreground: #ffffff;
+
+  --status-low: #4ade80;
+  --status-low-bg: #0d2e1a;
+  --status-low-border: #166534;
+  --status-moderate: #fbbf24;
+  --status-moderate-bg: #2a1f0a;
+  --status-moderate-border: #78450a;
+  --status-high: #f87171;
+  --status-high-bg: #2a0e0e;
+  --status-high-border: #7f1d1d;
+
+  --glass-bg: rgba(21, 33, 48, 0.88);
+  --glass-border: rgba(30, 50, 72, 0.6);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-family);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+}
+
+/* ── Glassmorphism ───────────────────────────────────────────── */
+.glass-bg {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.glass-border {
+  border: 1px solid var(--glass-border);
+}
+
+/* ── Subtle texture overlay ──────────────────────────────────── */
+.texture-bg {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.018'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ── Status color helpers ────────────────────────────────────── */
+.status-low  { color: var(--status-low); }
+.status-mod  { color: var(--status-moderate); }
+.status-high { color: var(--status-high); }
+
+/* ── Safe area ───────────────────────────────────────────────── */
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+/* ── Scrollbar hiding ────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
