@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
+import type { Site } from '../../api/sites';
+import TimelineScrubber from './TimelineScrubber';
 
 // ─── Floor plan SVG assets ────────────────────────────────────────────────────
-// All 10 floor plans imported eagerly so Vite bundles them correctly.
 import heFloor0 from "../../assets/floor_plans/HE-0-AR001-8.5_x_11.svg";
 import heFloor1 from "../../assets/floor_plans/HE-1-AR001-8.5_X_11.svg";
 import heFloor2 from "../../assets/floor_plans/HE-2-AR001-8.5_X_11.svg";
@@ -13,30 +14,23 @@ import liFloor1 from "../../assets/floor_plans/LI-AR-1-11x8-5.svg";
 import liFloor2 from "../../assets/floor_plans/LI-AR-2-11x8-5.svg";
 import liFloor3 from "../../assets/floor_plans/LI-AR-3-11x8-5.svg";
 
-// ─── Room coordinate data ─────────────────────────────────────────────────────
-// Generated from the floor plan SVGs by extracting text-element transform matrices.
-// Each entry is the anchor centre of a room label on the SVG canvas.
 import roomCoordsRaw from "../../data/room-coordinates.json";
 import type { ApRecord } from './types';
 
-/** All SVGs share the same canvas size */
-const SVG_WIDTH = 1056;
-const SVG_HEIGHT = 816;
+// ─── Exported constants for use in HeatmapPage ───────────────────────────────
 
-// ─── Building / level config ──────────────────────────────────────────────────
+export type Building = "HE" | "LI" | "";
 
-/** "" = no building selected (placeholder state) */
-type Building = "HE" | "LI" | "";
-
-const LEVELS: Record<"HE" | "LI", string[]> = {
+export const LEVELS: Record<"HE" | "LI", string[]> = {
   HE: ["0", "1", "2", "3", "4"],
   LI: ["M", "0", "1", "2", "3"],
 };
 
-/**
- * Maps "BUILDING-LEVEL" → the imported SVG URL.
- * Update this map if floor plan filenames change.
- */
+// ─── Module-private constants ─────────────────────────────────────────────────
+
+const SVG_WIDTH = 1056;
+const SVG_HEIGHT = 816;
+
 const FLOOR_PLAN_SVG: Record<string, string> = {
   "HE-0": heFloor0,
   "HE-1": heFloor1,
@@ -50,43 +44,30 @@ const FLOOR_PLAN_SVG: Record<string, string> = {
   "LI-3": liFloor3,
 };
 
-// ─── Room coordinate types ────────────────────────────────────────────────────
-
 interface RoomCoord {
-  id: string;       // e.g. "he041"
-  room: string;     // e.g. "041"
-  building: string; // e.g. "HE"
-  level: string;    // e.g. "0"
-  x: number;        // SVG x — anchor centre of the room label
-  y: number;        // SVG y — anchor centre of the room label
+  id: string;
+  room: string;
+  building: string;
+  level: string;
+  x: number;
+  y: number;
 }
 
 const ALL_ROOM_COORDS = roomCoordsRaw as RoomCoord[];
 
 // ─── Multi-AP positioning logic ───────────────────────────────────────────────
 
-/** Horizontal gap (SVG px) between dots when N APs share the same room. */
 const AP_SPACING = 20;
 
 interface RenderedAP extends ApRecord {
-  renderX: number; // final SVG x with multi-AP horizontal offset applied
-  renderY: number; // final SVG y (same as room anchor y)
+  renderX: number;
+  renderY: number;
 }
 
-/**
- * Given raw AP records and a room-coordinate lookup, computes (renderX, renderY)
- * for every AP, spreading them horizontally around the shared room anchor.
- *
- *   N=1 → AP sits exactly on the anchor (no offset)
- *   N=2 → APs at  anchor.x − 10  and  anchor.x + 10
- *   N=3 → APs at  anchor.x − 20,       anchor.x,      anchor.x + 20
- *   ...
- */
 function computeRenderedAPs(
   aps: ApRecord[],
   coordsByRoomKey: Map<string, { x: number; y: number }>,
 ): RenderedAP[] {
-  // Group APs by room key
   const groups = new Map<string, ApRecord[]>();
   for (const ap of aps) {
     const key = `${ap.building}-${ap.room}`;
@@ -97,11 +78,9 @@ function computeRenderedAPs(
   const result: RenderedAP[] = [];
   for (const [roomKey, roomAps] of groups) {
     const coord = coordsByRoomKey.get(roomKey);
-    if (!coord) continue; // AP's room has no coordinates — skip
-
+    if (!coord) continue;
     const count = roomAps.length;
     roomAps.forEach((ap, idx) => {
-      // Centre the spread so all dots are symmetric around the anchor
       const offset = (idx - (count - 1) / 2) * AP_SPACING;
       result.push({ ...ap, renderX: coord.x + offset, renderY: coord.y });
     });
@@ -109,164 +88,228 @@ function computeRenderedAPs(
   return result;
 }
 
-// ─── Colour helper ────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function totalClients(ap: ApRecord): number {
+  return ap.clientCount + ap.wiredCount;
+}
 
 function getApColor(ap: ApRecord): string {
-  if (ap.clientCount === 0) return "#22c55e";
-  if (ap.clientCount < 10) return "#84cc16";
-  if (ap.clientCount < 20) return "#eab308";
-  if (ap.clientCount < 30) return "#f97316";
+  const t = totalClients(ap);
+  if (t === 0) return "#22c55e";
+  if (t < 10) return "#84cc16";
+  if (t < 20) return "#eab308";
+  if (t < 30) return "#f97316";
   return "#ef4444";
 }
 
-// ─── Heatmap blob helpers ─────────────────────────────────────────────────────
-// Blobs use the same green→yellow→red palette as the AP dots.
-
-/** SVG-space radius of the radial gradient blob (60–200 px). */
-function getHeatRadius(clientCount: number): number {
-  if (clientCount === 0) return 60;
-  if (clientCount < 10) return 90;
-  if (clientCount < 20) return 120;
-  if (clientCount < 30) return 160;
+function getHeatRadius(count: number): number {
+  if (count === 0) return 60;
+  if (count < 10) return 90;
+  if (count < 20) return 120;
+  if (count < 30) return 160;
   return 200;
 }
 
-/** Peak opacity of the heat blob (0.20–0.70). */
-function getHeatOpacity(clientCount: number): number {
-  if (clientCount === 0) return 0.20;
-  if (clientCount < 10) return 0.35;
-  if (clientCount < 20) return 0.50;
-  if (clientCount < 30) return 0.60;
+function getHeatOpacity(count: number): number {
+  if (count === 0) return 0.20;
+  if (count < 10) return 0.35;
+  if (count < 20) return 0.50;
+  if (count < 30) return 0.60;
   return 0.70;
 }
 
-// Stable empty array — avoids spurious useMemo re-runs before real data arrives
 const NO_APS: ApRecord[] = [];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
-  /** Live AP records from useHeatmap(). */
   liveAPs?: ApRecord[];
-  /**
-   * Whether the selected site has a floor plan available.
-   * Defaults to true. Pass false to show the "coming soon" overlay.
-   */
   siteHasFloorPlan?: boolean;
-  /**
-   * Controls which building options appear in the dropdown.
-   * '' = blank/placeholder option; 'HE' | 'LI' = real buildings.
-   * Defaults to ['HE', 'LI'].
-   */
-  availableBuildings?: Array<Building>;
+  building: Building;
+  level: string;
+  sites: Site[];
+  siteId: string;
+  onSiteChange: (id: string) => void;
+  onBuildingChange: (b: Building) => void;
+  onLevelChange: (l: string) => void;
+  totalWireless: number;
+  totalWired: number;
+  // Timeline scrubber
+  timelineMode: boolean;
+  onTimelineModeChange: (v: boolean) => void;
+  timelineEpochs: number[];
+  timelineScrubIndex: number;
+  onTimelineScrubChange: (i: number) => void;
+  timelineLoading: boolean;
+  timeFrom: number;
+  timeTo: number;
+  onTimeFromChange: (v: number) => void;
+  onTimeToChange: (v: number) => void;
+}
+
+function toDatetimeLocal(epochSeconds: number): string {
+  const d = new Date(epochSeconds * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  );
+}
+
+function fromDatetimeLocal(s: string): number {
+  return Math.floor(new Date(s).getTime() / 1000);
 }
 
 export default function FloorPlanMap({
   liveAPs = NO_APS,
   siteHasFloorPlan = true,
-  availableBuildings = ['HE', 'LI'],
+  building,
+  level,
+  sites,
+  siteId,
+  onSiteChange,
+  onBuildingChange,
+  onLevelChange,
+  totalWireless,
+  totalWired,
+  timelineMode,
+  onTimelineModeChange,
+  timelineEpochs,
+  timelineScrubIndex,
+  onTimelineScrubChange,
+  timelineLoading,
+  timeFrom,
+  timeTo,
+  onTimeFromChange,
+  onTimeToChange,
 }: Props) {
-  const [building, setBuilding] = useState<Building>(availableBuildings[0] ?? 'HE');
-  const [level, setLevel] = useState<string>(
-    availableBuildings[0] && availableBuildings[0] !== '' ? LEVELS[availableBuildings[0] as 'HE' | 'LI'][0] : ''
-  );
-  // selectedRoom holds the "BUILDING-ROOM" key of the clicked room (e.g. "HE-052")
-  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+  const [hoveredApKey, setHoveredApKey] = useState<string | null>(null);
 
-  // When the parent changes which buildings are available (e.g. site selection changes),
-  // reset to the first available building automatically.
-  useEffect(() => {
-    const first = availableBuildings[0] ?? '';
-    setBuilding(first);
-    setLevel(first !== '' ? LEVELS[first as 'HE' | 'LI'][0] : '');
-    setSelectedRoom(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availableBuildings.join(',')]);
-
-  function handleBuildingChange(b: Building) {
-    setBuilding(b);
-    setLevel(b !== '' ? LEVELS[b as 'HE' | 'LI'][0] : '');
-    setSelectedRoom(null);
-  }
-
-  // Room anchors for the currently visible floor
   const floorRooms = useMemo(
     () => ALL_ROOM_COORDS.filter((r) => r.building === building && r.level === level),
     [building, level],
   );
 
-  // Fast lookup: "BUILDING-ROOM" → { x, y }
   const coordsByRoomKey = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>();
     for (const r of floorRooms) map.set(`${r.building}-${r.room}`, { x: r.x, y: r.y });
     return map;
   }, [floorRooms]);
 
-  // computeRenderedAPs handles multi-AP rooms: N APs → N horizontally spread dots
   const renderedAPs = useMemo(
     () => computeRenderedAPs(liveAPs, coordsByRoomKey),
     [liveAPs, coordsByRoomKey],
   );
 
-  // All APs belonging to the selected room (for the detail card)
-  const selectedRoomAPs = selectedRoom
-    ? renderedAPs.filter((ap) => `${ap.building}-${ap.room}` === selectedRoom)
-    : [];
+  const hoveredAp = hoveredApKey
+    ? renderedAPs.find((ap) => `${ap.building}-${ap.room}-${ap.apId}` === hoveredApKey) ?? null
+    : null;
 
-  const selectedAnchor = selectedRoom ? coordsByRoomKey.get(selectedRoom) : null;
   const floorSvg = building !== '' ? FLOOR_PLAN_SVG[`${building}-${level}`] : undefined;
 
   return (
     <div className="w-full overflow-auto border rounded-lg bg-white p-3 space-y-3">
-
-      {/* ── Building / level selectors ─────────────────────────────────────── */}
-      <div className="flex items-center gap-4">
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-          Building
+      {/* ── Filters row ────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-end gap-4">
+        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+          Site
           <select
-            className="ml-1 border border-gray-300 rounded px-2 py-1 text-sm"
-            value={building}
-            onChange={(e) => handleBuildingChange(e.target.value as Building)}
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm min-w-40"
+            value={siteId}
+            onChange={(e) => onSiteChange(e.target.value)}
           >
-            {availableBuildings.includes('') && (
-              <option value="">— Select building —</option>
-            )}
-            {availableBuildings.includes('HE') && (
-              <option value="HE">HE — Herzberg</option>
-            )}
-            {availableBuildings.includes('LI') && (
-              <option value="LI">LI — Library</option>
-            )}
+            <option value="">All Sites</option>
+            {sites.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
           </select>
         </label>
 
-        {building !== '' && (
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            Level
-            <select
-              className="ml-1 border border-gray-300 rounded px-2 py-1 text-sm"
-              value={level}
-              onChange={(e) => { setLevel(e.target.value); setSelectedRoom(null); }}
-            >
-              {LEVELS[building as 'HE' | 'LI'].map((l) => (
-                <option key={l} value={l}>
-                  {l === "M" ? "Mezzanine" : `Floor ${l}`}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+          Building
+          <select
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm min-w-40"
+            value={building}
+            onChange={(e) => onBuildingChange(e.target.value as Building)}
+          >
+            <option value="">— Select —</option>
+            <option value="HE">HE — Herzberg</option>
+            <option value="LI">LI — Library</option>
+          </select>
+        </label>
 
-        <span className="ml-auto text-xs text-gray-400">
-          {renderedAPs.length} APs active
-        </span>
+        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+          Level
+          <select
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm min-w-36"
+            value={level}
+            disabled={building === ''}
+            onChange={(e) => onLevelChange(e.target.value)}
+          >
+            {building !== '' && LEVELS[building as 'HE' | 'LI'].map((l) => (
+              <option key={l} value={l}>
+                {l === 'M' ? 'Mezzanine' : `Floor ${l}`}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="ml-auto flex items-end gap-4 pb-0.5">
+          <button
+            className={`text-xs px-2.5 py-1.5 rounded border font-medium transition-colors self-end ${
+              timelineMode
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+            }`}
+            onClick={() => onTimelineModeChange(!timelineMode)}
+          >
+            {timelineMode ? 'Live' : 'History'}
+          </button>
+          <div className="text-right">
+            <p className="text-xs text-gray-500">Wireless</p>
+            <p className="text-lg font-semibold text-gray-900">{totalWireless}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-500">Wired</p>
+            <p className="text-lg font-semibold text-gray-900">{totalWired}</p>
+          </div>
+          <div className="text-right border-l border-gray-200 pl-4">
+            <p className="text-xs text-gray-500">APs on floor</p>
+            <p className="text-lg font-semibold text-gray-900">{renderedAPs.length}</p>
+          </div>
+        </div>
       </div>
 
+      {/* ── Timeline scrubber — shown below filters when history mode is active ── */}
+      {timelineMode && (
+        <div className="border-t border-gray-100 pt-3 space-y-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="datetime-local"
+              className="border border-gray-300 rounded px-2 py-1 text-xs text-gray-700"
+              value={toDatetimeLocal(timeFrom)}
+              onChange={(e) => { onTimeFromChange(fromDatetimeLocal(e.target.value)); onTimelineScrubChange(0); }}
+            />
+            <span className="text-xs text-gray-400">→</span>
+            <input
+              type="datetime-local"
+              className="border border-gray-300 rounded px-2 py-1 text-xs text-gray-700"
+              value={toDatetimeLocal(timeTo)}
+              onChange={(e) => { onTimeToChange(fromDatetimeLocal(e.target.value)); onTimelineScrubChange(0); }}
+            />
+          </div>
+          <TimelineScrubber
+            epochs={timelineEpochs}
+            scrubIndex={timelineScrubIndex}
+            onChange={onTimelineScrubChange}
+            loading={timelineLoading}
+          />
+        </div>
+      )}
+
       {/* ── Floor plan + SVG overlay ────────────────────────────────────────── */}
-      <div
-        className="relative w-full aspect-1056/816"
-      >
-        {/* ── No building selected: placeholder panel ──────────────────────── */}
+      <div className="relative w-full aspect-1056/816">
         {building === '' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-50 rounded border border-dashed border-gray-300">
             <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -276,7 +319,6 @@ export default function FloorPlanMap({
           </div>
         )}
 
-        {/* Floor plan background — only when a building is selected */}
         {building !== '' && floorSvg && (
           <img
             src={floorSvg}
@@ -285,7 +327,6 @@ export default function FloorPlanMap({
           />
         )}
 
-        {/* ── Coming-soon overlay for sites without floor plans ─────────────── */}
         {building !== '' && !siteHasFloorPlan && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/60 rounded">
             <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -297,128 +338,88 @@ export default function FloorPlanMap({
         )}
 
         {building !== '' && (
-        <svg
-          viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-          className="absolute inset-0 w-full h-full pointer-events-none"
-        >
-          {/* ── GRADIENT DEFINITIONS (one per rendered AP) ───────────────── */}
-          <defs>
-            {renderedAPs.map((ap) => (
-              <radialGradient
-                key={`grad-${ap.building}-${ap.room}-${ap.apId}`}
-                id={`grad-${ap.building}-${ap.room}-${ap.apId}`}
-                gradientUnits="userSpaceOnUse"
-                cx={ap.renderX}
-                cy={ap.renderY}
-                r={getHeatRadius(ap.clientCount)}
-              >
-                <stop offset="0%" stopColor={getApColor(ap)} stopOpacity={getHeatOpacity(ap.clientCount)} />
-                <stop offset="100%" stopColor={getApColor(ap)} stopOpacity={0} />
-              </radialGradient>
-            ))}
-          </defs>
-
-          {/* ── HEATMAP BLOBS (rendered before dots so dots appear on top) ── */}
-          {renderedAPs.map((ap) => (
-            <circle
-              key={`blob-${ap.building}-${ap.room}-${ap.apId}`}
-              cx={ap.renderX}
-              cy={ap.renderY}
-              r={getHeatRadius(ap.clientCount)}
-              fill={`url(#grad-${ap.building}-${ap.room}-${ap.apId})`}
-            />
-          ))}
-
-          {/*
-           * ── LIVE AP DOTS ─────────────────────────────────────────────────────
-           * Rendered once liveAPs (from useHeatmap) is non-empty.
-           *
-           * Each dot's position is pre-computed by computeRenderedAPs():
-           *   • 1 AP in a room  → dot sits exactly on the room anchor
-           *   • N APs in a room → dots are spread AP_SPACING (20px) apart,
-           *                       centred on the room anchor
-           *
-           * Clicking any dot selects the whole room — the detail card shows
-           * all APs in that room together.
-           * ─────────────────────────────────────────────────────────────────────
-           */}
-          {building !== '' && renderedAPs.map((ap) => {
-            const roomKey = `${ap.building}-${ap.room}`;
-            const isSelected = selectedRoom === roomKey;
-            return (
-              <g
-                key={`${roomKey}-${ap.apId}`}
-                className="pointer-events-auto cursor-pointer"
-                onClick={() => setSelectedRoom(isSelected ? null : roomKey)}
-              >
-                {/* Pulse ring */}
-                <circle cx={ap.renderX} cy={ap.renderY} r={10} fill={getApColor(ap)} opacity={0.25}>
-                  <animate attributeName="r" from="8" to="16" dur="1.5s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite" />
-                </circle>
-                {/* Main dot */}
-                <circle
+          <svg
+            viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+          >
+            <defs>
+              {renderedAPs.map((ap) => (
+                <radialGradient
+                  key={`grad-${ap.building}-${ap.room}-${ap.apId}`}
+                  id={`grad-${ap.building}-${ap.room}-${ap.apId}`}
+                  gradientUnits="userSpaceOnUse"
                   cx={ap.renderX}
                   cy={ap.renderY}
-                  r={8}
-                  fill={getApColor(ap)}
-                  stroke={isSelected ? "#1d4ed8" : "#fff"}
-                  strokeWidth={isSelected ? 2.5 : 2}
-                />
-                {/* Client count inside dot */}
-                <text
-                  x={ap.renderX}
-                  y={ap.renderY + 1}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize={7}
-                  fontWeight="bold"
-                  fill="#fff"
-                  className="pointer-events-none"
+                  r={getHeatRadius(totalClients(ap))}
                 >
-                  {ap.clientCount}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+                  <stop offset="0%" stopColor={getApColor(ap)} stopOpacity={getHeatOpacity(totalClients(ap))} />
+                  <stop offset="100%" stopColor={getApColor(ap)} stopOpacity={0} />
+                </radialGradient>
+              ))}
+            </defs>
+
+            {renderedAPs.map((ap) => (
+              <circle
+                key={`blob-${ap.building}-${ap.room}-${ap.apId}`}
+                cx={ap.renderX}
+                cy={ap.renderY}
+                r={getHeatRadius(totalClients(ap))}
+                fill={`url(#grad-${ap.building}-${ap.room}-${ap.apId})`}
+              />
+            ))}
+
+            {renderedAPs.map((ap) => {
+              const apKey = `${ap.building}-${ap.room}-${ap.apId}`;
+              const isHovered = hoveredApKey === apKey;
+              return (
+                <g
+                  key={apKey}
+                  className="pointer-events-auto cursor-pointer"
+                  onMouseEnter={() => setHoveredApKey(apKey)}
+                  onMouseLeave={() => setHoveredApKey(null)}
+                >
+                  <circle cx={ap.renderX} cy={ap.renderY} r={10} fill={getApColor(ap)} opacity={0.25}>
+                    <animate attributeName="r" from="8" to="16" dur="1.5s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite" />
+                  </circle>
+                  <circle
+                    cx={ap.renderX}
+                    cy={ap.renderY}
+                    r={8}
+                    fill={getApColor(ap)}
+                    stroke={isHovered ? "#1d4ed8" : "#fff"}
+                    strokeWidth={isHovered ? 2.5 : 2}
+                  />
+                  <text
+                    x={ap.renderX}
+                    y={ap.renderY + 1}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={7}
+                    fontWeight="bold"
+                    fill="#fff"
+                    className="pointer-events-none"
+                  >
+                    {totalClients(ap)}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
         )}
 
-        {/*
-         * ── ROOM DETAIL CARD ──────────────────────────────────────────────────
-         * Appears when a room anchor or AP dot is clicked.
-         * Lists every AP installed in that room (one row per AP).
-         * ─────────────────────────────────────────────────────────────────────
-         */}
-        {selectedRoom && selectedAnchor && (
+        {/* ── Hover tooltip ────────────────────────────────────────────────── */}
+        {hoveredAp && (
           <div
-            className="absolute z-10 bg-white border border-gray-300 rounded-lg shadow-lg p-3 text-sm min-w-45 translate-x-3 -translate-y-1/2 left-(--tx) top-(--ty)"
+            className="absolute z-10 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm pointer-events-none -translate-y-full -translate-x-1/2 left-(--tx) top-(--ty)"
             style={{
-              '--tx': `${(selectedAnchor.x / SVG_WIDTH) * 100}%`,
-              '--ty': `${(selectedAnchor.y / SVG_HEIGHT) * 100}%`,
+              '--tx': `${(hoveredAp.renderX / SVG_WIDTH) * 100}%`,
+              '--ty': `${(hoveredAp.renderY / SVG_HEIGHT) * 100}%`,
             } as React.CSSProperties}
           >
-            <div className="font-semibold text-gray-900 mb-1">
-              Room {selectedRoom.split("-")[1]}
-            </div>
-            {selectedRoomAPs.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">No APs loaded yet</p>
-            ) : (
-              selectedRoomAPs.map((ap) => (
-                <div key={ap.apId} className="flex items-center gap-2 py-0.5">
-                  <span
-                    className="inline-block w-2.5 h-2.5 rounded-full shrink-0 bg-(--ap-color)"
-                    style={{ '--ap-color': getApColor(ap) } as React.CSSProperties}
-                  />
-                  <span className="text-xs text-gray-600">
-                    AP {ap.apId} · {ap.clientCount} wireless · {ap.wiredCount} wired
-                  </span>
-                </div>
-              ))
-            )}
-            <button className="mt-2 text-xs text-blue-600 hover:underline" onClick={() => setSelectedRoom(null)}>
-              Close
-            </button>
+            <p className="font-semibold text-gray-900">Room {hoveredAp.room} · AP {hoveredAp.apId}</p>
+            <p className="text-gray-900 font-medium">{totalClients(hoveredAp)} clients</p>
+            <p className="text-xs text-gray-500">{hoveredAp.clientCount} wireless · {hoveredAp.wiredCount} wired</p>
           </div>
         )}
       </div>

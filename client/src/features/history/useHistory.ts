@@ -10,15 +10,15 @@ export function useHistory(params: HistoryParams) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { from, to, ap_id, site_id } = params;
+  const { from, to, site_id } = params;
 
   // Stable load function — recreated only when filter params change
   const load = useCallback(() => {
-    fetchHistory({ from, to, ap_id, site_id })
+    fetchHistory({ from, to, site_id })
       .then((result) => { setData(result); setError(null); })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [from, to, ap_id, site_id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [from, to, site_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show loading indicator and re-fetch whenever params change (or on mount)
   useEffect(() => {

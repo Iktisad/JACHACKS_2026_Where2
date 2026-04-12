@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { fetchDevices } from '../../api/devices';
+import { useState } from 'react';
 import { useHistory } from './useHistory';
 import { useSites } from '../../shared/hooks/useSites';
 import HistoryChart from './HistoryChart';
@@ -7,7 +6,7 @@ import HistoryTable from './HistoryTable';
 import StatCard from '../../shared/components/StatCard';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import ErrorBanner from '../../shared/components/ErrorBanner';
-import type { Device, HistoryParams } from './types';
+import type { HistoryParams } from './types';
 
 /** Convert epoch seconds to the value expected by <input type="datetime-local"> */
 function toDatetimeLocal(epochSeconds: number): string {
@@ -29,16 +28,9 @@ export default function HistoryPage() {
   const [from, setFrom] = useState(now - 86400);
   const [to, setTo] = useState(now);
   const [siteId, setSiteId] = useState('');
-  const [apId, setApId] = useState('');
-  const [devices, setDevices] = useState<Device[]>([]);
   const { sites } = useSites();
 
-  useEffect(() => {
-    setApId(''); // reset AP when site changes
-    fetchDevices(siteId || undefined).then(setDevices).catch(() => {});
-  }, [siteId]);
-
-  const params: HistoryParams = { from, to, ap_id: apId || undefined, site_id: siteId || undefined };
+  const params: HistoryParams = { from, to, site_id: siteId || undefined };
   const { data, loading, error } = useHistory(params);
 
   const latestWireless = data.at(-1)?.client_count ?? 0;
@@ -67,20 +59,6 @@ export default function HistoryPage() {
             <option value="">All Sites</option>
             {sites.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
-          Access Point
-          <select
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm min-w-[200px]"
-            value={apId}
-            onChange={(e) => setApId(e.target.value)}
-          >
-            <option value="">All (Site-wide)</option>
-            {devices.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
             ))}
           </select>
         </label>

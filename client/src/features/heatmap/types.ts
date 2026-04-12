@@ -1,10 +1,18 @@
+/** One AP's counts at a specific epoch, returned by GET /api/heatmap/timeline */
+export interface TimelineSnapshot {
+  ap_id: string;
+  name: string;
+  building: string | null;
+  epoch: number;
+  client_count: number;
+  wired_client_count: number;
+}
+
 /** Shape returned by GET /api/heatmap/current */
 export interface HeatmapAP {
   ap_id: string;
   name: string;
   building: string | null;
-  map_x: number | null;
-  map_y: number | null;
   client_count: number;
   wired_client_count: number;
 }
