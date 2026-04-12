@@ -206,6 +206,23 @@ export function AdminLogin() {
             </p>
           </div>
         </motion.div>
+
+        {/* ── Navigation footer ──────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="mt-4 flex items-center justify-center gap-1 text-[13px]"
+          style={{ color: 'var(--muted-foreground)' }}
+        >
+          <Link to="/" className="font-semibold hover:underline underline-offset-2" style={{ color: 'var(--primary)' }}>
+            ← Home
+          </Link>
+          <span className="mx-2" style={{ color: 'var(--border)' }}>·</span>
+          <Link to="/student" className="font-semibold hover:underline underline-offset-2" style={{ color: 'var(--primary)' }}>
+            Switch to Student
+          </Link>
+        </motion.div>
       </div>
     </div>
   );

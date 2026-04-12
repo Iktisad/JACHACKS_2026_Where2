@@ -296,25 +296,14 @@ export default function RoleSelectPage() {
         </div>
       </button>
 
-      {/* ── Branding footer (mobile only) ─────────────────────── */}
-      <div
-        className="lg:hidden absolute bottom-4 left-0 right-0 flex justify-center z-30"
-      >
-        <span className="text-xs font-medium" style={{ color: 'rgba(66,125,157,0.5)' }}>
-          WhereTo Campus · Jackhacks ITS Challenge
-        </span>
-      </div>
-
-      {/* ── Branding footer (desktop) ──────────────────────────── */}
-      <div
-        className="hidden lg:flex absolute bottom-6 left-1/2 -translate-x-1/2 flex-col items-center gap-1 z-30"
-      >
-        <span className="text-xs font-bold tracking-wide" style={{ color: 'var(--primary)', opacity: 0.5 }}>
-          WhereTo Campus
-        </span>
-        <span className="text-xs" style={{ color: 'var(--muted-foreground)', opacity: 0.6 }}>
-          Jackhacks · ITS Challenge
-        </span>
+      {/* ── Logo footer ───────────────────────────────────────── */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30">
+        <img
+          src="/icons/app logo.svg"
+          alt="WhereTo"
+          className="h-8 w-auto object-contain"
+          style={{ opacity: 0.55 }}
+        />
       </div>
     </div>
   )
