@@ -1,6 +1,7 @@
-import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Flame, History } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Flame, History, LogOut } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useAdminAuth } from '../context/AdminAuthContext';
 
 const navItems = [
   { path: '/admin',         icon: LayoutDashboard, label: 'Dashboard' },
@@ -10,6 +11,13 @@ const navItems = [
 
 export function AdminBottomNav() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAdminAuth();
+
+  function handleLogout() {
+    logout();
+    navigate('/admin/login');
+  }
 
   return (
     <nav
@@ -76,6 +84,20 @@ export function AdminBottomNav() {
             </Link>
           );
         })}
+
+        {/* Logout button */}
+        <motion.button
+          whileTap={{ scale: 0.92 }}
+          onClick={handleLogout}
+          className="relative flex flex-col items-center justify-center flex-1 h-full gap-1"
+        >
+          <div className="w-9 h-9 flex items-center justify-center rounded-xl transition-all">
+            <LogOut className="w-5 h-5" style={{ color: 'var(--destructive)' }} strokeWidth={1.7} />
+          </div>
+          <span className="text-[10px] leading-none font-medium" style={{ color: 'var(--destructive)' }}>
+            Sign out
+          </span>
+        </motion.button>
       </div>
     </nav>
   );

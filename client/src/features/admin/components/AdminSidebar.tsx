@@ -1,6 +1,7 @@
-import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Flame, History, ArrowLeftRight } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Flame, History, ArrowLeftRight, LogOut } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useAdminAuth } from '../context/AdminAuthContext';
 
 const navItems = [
   { path: '/admin',         icon: LayoutDashboard, label: 'Dashboard'    },
@@ -10,6 +11,13 @@ const navItems = [
 
 export function AdminSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { admin, logout } = useAdminAuth();
+
+  function handleLogout() {
+    logout();
+    navigate('/admin/login');
+  }
 
   return (
     <div
@@ -86,8 +94,30 @@ export function AdminSidebar() {
           })}
         </nav>
 
-        {/* Switch role link */}
-        <div className="mt-auto pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+        {/* Footer */}
+        <div className="mt-auto pt-2 border-t space-y-0.5" style={{ borderColor: 'var(--border)' }}>
+          {admin && (
+            <div
+              className="flex items-center gap-2 px-2 py-2 rounded-xl text-[12px]"
+              style={{ color: 'var(--muted-foreground)' }}
+            >
+              <div
+                className="flex items-center justify-center rounded-lg shrink-0 text-[10px] font-bold"
+                style={{ width: 24, height: 24, background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+              >
+                {admin.name.charAt(0)}
+              </div>
+              <span className="truncate">{admin.name}</span>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2 px-2 py-2 rounded-xl text-[12px] transition-colors hover:bg-red-50"
+            style={{ color: 'var(--destructive)' }}
+          >
+            <LogOut className="size-3.5" strokeWidth={1.7} />
+            Sign out
+          </button>
           <Link
             to="/"
             className="flex items-center gap-2 px-2 py-2 rounded-xl text-[12px] transition-colors"
