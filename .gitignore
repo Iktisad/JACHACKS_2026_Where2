@@ -12,7 +12,7 @@ server/dist/
 client/dist/
 
 # Database
-data/
+server/data/
 
 # Vite cache
 client/.vite/
