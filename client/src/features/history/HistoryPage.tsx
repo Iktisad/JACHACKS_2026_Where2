@@ -2,6 +2,8 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useHistory } from './useHistory';
 import { useHeatmapTimeline } from '../heatmap/useHeatmapTimeline';
 import { useSites } from '../../shared/hooks/useSites';
+import { Calendar, Check, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import HistoryChart from './HistoryChart';
 import HistoryTable from './HistoryTable';
 import FloorPlanMap, { LEVELS } from '../heatmap/FloorPlanMap';
@@ -12,20 +14,46 @@ import ErrorBanner from '../../shared/components/ErrorBanner';
 import { formatEpochFull } from '../../shared/utils/formatters';
 import type { HistoryParams } from './types';
 
-/** Convert epoch seconds to the value expected by <input type="datetime-local"> */
-function toDatetimeLocal(epochSeconds: number): string {
-  const d = new Date(epochSeconds * 1000);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  );
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** Convert epoch seconds to date string YYYY-MM-DD */
+function toDateStr(epoch: number): string {
+  const d = new Date(epoch * 1000);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-/** Parse a datetime-local string back to epoch seconds */
-function fromDatetimeLocal(s: string): number {
-  return Math.floor(new Date(s).getTime() / 1000);
+/** Convert epoch to 12h time parts */
+function toTimeParts(epoch: number): { h: number; m: number; ampm: 'AM' | 'PM' } {
+  const d = new Date(epoch * 1000);
+  const hours24 = d.getHours();
+  return {
+    h: hours24 === 0 ? 12 : hours24 > 12 ? hours24 - 12 : hours24,
+    m: d.getMinutes(),
+    ampm: hours24 >= 12 ? 'PM' : 'AM',
+  };
 }
+
+/** Combine date string + 12h time parts into epoch seconds */
+function fromParts(dateStr: string, h: number, m: number, ampm: 'AM' | 'PM'): number {
+  let h24 = h % 12;
+  if (ampm === 'PM') h24 += 12;
+  return Math.floor(new Date(`${dateStr}T${pad2(h24)}:${pad2(m)}`).getTime() / 1000);
+}
+
+const JAC_PATTERN = /jac|herzberg|library|john\s*abbott/i;
+
+type TimePreset = '1h' | '6h' | '24h' | '7d' | '30d' | 'custom';
+
+const TIME_PRESETS: { key: TimePreset; label: string; seconds: number }[] = [
+  { key: '1h', label: '1 Hour', seconds: 3600 },
+  { key: '6h', label: '6 Hours', seconds: 21600 },
+  { key: '24h', label: '24 Hours', seconds: 86400 },
+  { key: '7d', label: '7 Days', seconds: 604800 },
+  { key: '30d', label: '30 Days', seconds: 2592000 },
+];
+
+const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);   // 1–12
+const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
 type ViewMode = 'chart' | 'heatmap';
 
@@ -46,10 +74,36 @@ function filterActiveEpochs(
 
 export default function HistoryPage() {
   const now = Math.floor(Date.now() / 1000);
+
+  /* Applied (active) filter state */
   const [from, setFrom] = useState(now - 86400);
   const [to, setTo] = useState(now);
   const [siteId, setSiteId] = useState('');
   const { sites } = useSites();
+
+  /* Staged (draft) filter state — only applied on button click or preset */
+  const initFrom = toTimeParts(now - 86400);
+  const initTo = toTimeParts(now);
+  const [stagedFromDate, setStagedFromDate] = useState(toDateStr(now - 86400));
+  const [stagedFromH, setStagedFromH] = useState(initFrom.h);
+  const [stagedFromM, setStagedFromM] = useState(initFrom.m);
+  const [stagedFromAP, setStagedFromAP] = useState<'AM' | 'PM'>(initFrom.ampm);
+  const [stagedToDate, setStagedToDate] = useState(toDateStr(now));
+  const [stagedToH, setStagedToH] = useState(initTo.h);
+  const [stagedToM, setStagedToM] = useState(initTo.m);
+  const [stagedToAP, setStagedToAP] = useState<'AM' | 'PM'>(initTo.ampm);
+  const [activePreset, setActivePreset] = useState<TimePreset>('24h');
+  const [justApplied, setJustApplied] = useState(false);
+
+  /* Default to JAC Campus site when sites load */
+  const [siteDefaulted, setSiteDefaulted] = useState(false);
+  useEffect(() => {
+    if (!siteDefaulted && sites.length > 0) {
+      const jacSite = sites.find((s) => JAC_PATTERN.test(s.name));
+      if (jacSite) setSiteId(jacSite.id);
+      setSiteDefaulted(true);
+    }
+  }, [sites, siteDefaulted]);
 
   const [viewMode, setViewMode] = useState<ViewMode>('chart');
   const [tableOpen, setTableOpen] = useState(false);
@@ -95,9 +149,45 @@ export default function HistoryPage() {
 
   // ── Site detection for floor plan ──
   const selectedSite = sites.find((s) => s.id === siteId);
-  const JAC_PATTERN = /jac|herzberg|library|john\s*abbott/i;
   const isJac = siteId !== '' && JAC_PATTERN.test(selectedSite?.name ?? '');
   const siteHasFloorPlan = siteId === '' || isJac;
+
+  /** Check if staged values differ from applied values */
+  const stagedFromEpoch = fromParts(stagedFromDate, stagedFromH, stagedFromM, stagedFromAP);
+  const stagedToEpoch = fromParts(stagedToDate, stagedToH, stagedToM, stagedToAP);
+  const isDirty = activePreset === 'custom' && (stagedFromEpoch !== from || stagedToEpoch !== to);
+
+  /** Apply a time preset */
+  function applyPreset(preset: TimePreset) {
+    const n = Math.floor(Date.now() / 1000);
+    const range = TIME_PRESETS.find((p) => p.key === preset);
+    if (!range) return;
+    const newFrom = n - range.seconds;
+    const newTo = n;
+    const fp = toTimeParts(newFrom);
+    const tp = toTimeParts(newTo);
+    setActivePreset(preset);
+    setStagedFromDate(toDateStr(newFrom));
+    setStagedFromH(fp.h); setStagedFromM(fp.m); setStagedFromAP(fp.ampm);
+    setStagedToDate(toDateStr(newTo));
+    setStagedToH(tp.h); setStagedToM(tp.m); setStagedToAP(tp.ampm);
+    setFrom(newFrom);
+    setTo(newTo);
+    flashApplied();
+  }
+
+  /** Apply staged date/time to active filters */
+  function applyDateRange() {
+    setFrom(stagedFromEpoch);
+    setTo(stagedToEpoch);
+    setActivePreset('custom');
+    flashApplied();
+  }
+
+  function flashApplied() {
+    setJustApplied(true);
+    setTimeout(() => setJustApplied(false), 1800);
+  }
 
   function handleBuildingChange(b: Building) {
     setBuilding(b);
@@ -118,7 +208,8 @@ export default function HistoryPage() {
         const next = prev + 1;
         if (next >= activeEpochs.length) {
           stopPlayback();
-          return prev;
+          setScrubIndex(0);
+          return 0;
         }
         return next;
       });
@@ -217,67 +308,240 @@ export default function HistoryPage() {
 
       {/* ── Filters ────────────────────────────────────────────────── */}
       <div
-        className="flex flex-wrap items-end gap-4 rounded-xl p-4"
+        className="rounded-xl p-4 sm:p-5 space-y-4 sm:space-y-5"
         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       >
-        <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-          Site
-          <select
-            className="rounded-lg px-2 py-1.5 text-sm min-w-45"
-            style={inputStyle}
-            value={siteId}
-            onChange={(e) => setSiteId(e.target.value)}
-          >
-            <option value="">All Sites</option>
-            {sites.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </label>
+        {/* Row 1: Site selector + Quick presets */}
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
+          <label className="flex flex-col gap-1.5 text-xs font-medium tracking-wide uppercase" style={{ color: 'var(--muted-foreground)' }}>
+            Site
+            <select
+              className="rounded-xl px-3 py-2 text-sm font-normal normal-case w-full sm:min-w-48"
+              style={inputStyle}
+              value={siteId}
+              onChange={(e) => setSiteId(e.target.value)}
+            >
+              <option value="">All Sites</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-          From
-          <input
-            type="datetime-local"
-            className="rounded-lg px-2 py-1.5 text-sm"
-            style={inputStyle}
-            value={toDatetimeLocal(from)}
-            onChange={(e) => setFrom(fromDatetimeLocal(e.target.value))}
-          />
-        </label>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium tracking-wide uppercase" style={{ color: 'var(--muted-foreground)' }}>Quick Range</span>
+            <div className="flex rounded-xl p-1 gap-1 overflow-x-auto" style={{ background: 'var(--muted)', border: '1px solid var(--border)' }}>
+              {TIME_PRESETS.map((p) => (
+                <button
+                  key={p.key}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0"
+                  style={{
+                    background: activePreset === p.key ? 'var(--primary)' : 'transparent',
+                    color: activePreset === p.key ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
+                    boxShadow: activePreset === p.key ? '0 1px 4px rgba(0,0,0,0.15)' : 'none',
+                  }}
+                  onClick={() => applyPreset(p.key)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
 
-        <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-          To
-          <input
-            type="datetime-local"
-            className="rounded-lg px-2 py-1.5 text-sm"
-            style={inputStyle}
-            value={toDatetimeLocal(to)}
-            onChange={(e) => setTo(fromDatetimeLocal(e.target.value))}
-          />
-        </label>
+        {/* Row 2: Custom date range */}
+        <div
+          className="rounded-xl p-3 sm:p-4 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-3"
+          style={{ background: 'var(--muted)', border: '1px solid var(--border)' }}
+        >
+          {/* ── From ── */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium tracking-wide uppercase flex items-center gap-1.5" style={{ color: 'var(--muted-foreground)' }}>
+              <Calendar className="size-3" /> From
+            </span>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                className="rounded-xl px-3 py-2 text-sm font-medium cursor-pointer min-w-0 flex-1 sm:flex-none"
+                style={inputStyle}
+                value={stagedFromDate}
+                onChange={(e) => { setStagedFromDate(e.target.value); setActivePreset('custom'); }}
+              />
+              <select
+                className="rounded-xl px-1 py-2 text-sm font-medium text-center w-13"
+                style={inputStyle}
+                value={stagedFromH}
+                onChange={(e) => { setStagedFromH(Number(e.target.value)); setActivePreset('custom'); }}
+              >
+                {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+              <span className="text-sm font-bold" style={{ color: 'var(--muted-foreground)' }}>:</span>
+              <select
+                className="rounded-xl px-1 py-2 text-sm font-medium text-center w-14"
+                style={inputStyle}
+                value={stagedFromM}
+                onChange={(e) => { setStagedFromM(Number(e.target.value)); setActivePreset('custom'); }}
+              >
+                {MINUTES.map((m) => <option key={m} value={m}>{pad2(m)}</option>)}
+              </select>
+              <div className="flex rounded-lg overflow-hidden shrink-0" style={{ border: '1px solid var(--border)' }}>
+                {(['AM', 'PM'] as const).map((v) => (
+                  <button
+                    key={v}
+                    className="px-2 py-2 text-xs font-bold cursor-pointer transition-colors"
+                    style={{
+                      background: stagedFromAP === v ? 'var(--primary)' : 'var(--input-background)',
+                      color: stagedFromAP === v ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
+                      border: 'none',
+                    }}
+                    onClick={() => { setStagedFromAP(v); setActivePreset('custom'); }}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Arrow separator — horizontal on desktop, vertical on mobile */}
+          <div className="hidden sm:flex flex-col items-center gap-1.5 mx-3">
+            <span className="text-xs font-medium tracking-wide uppercase" style={{ color: 'var(--muted-foreground)' }}>to</span>
+            <ArrowRight className="size-5" style={{ color: 'var(--muted-foreground)' }} />
+          </div>
+          <div className="flex sm:hidden items-center justify-center gap-2 py-1" style={{ color: 'var(--muted-foreground)' }}>
+            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+            <span className="text-xs font-medium tracking-wide uppercase">to</span>
+            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+          </div>
+
+          {/* ── To ── */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium tracking-wide uppercase flex items-center gap-1.5" style={{ color: 'var(--muted-foreground)' }}>
+              <Calendar className="size-3" /> End
+            </span>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                className="rounded-xl px-3 py-2 text-sm font-medium cursor-pointer min-w-0 flex-1 sm:flex-none"
+                style={inputStyle}
+                value={stagedToDate}
+                onChange={(e) => { setStagedToDate(e.target.value); setActivePreset('custom'); }}
+              />
+              <select
+                className="rounded-xl px-1 py-2 text-sm font-medium text-center w-13"
+                style={inputStyle}
+                value={stagedToH}
+                onChange={(e) => { setStagedToH(Number(e.target.value)); setActivePreset('custom'); }}
+              >
+                {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+              <span className="text-sm font-bold" style={{ color: 'var(--muted-foreground)' }}>:</span>
+              <select
+                className="rounded-xl px-1 py-2 text-sm font-medium text-center w-14"
+                style={inputStyle}
+                value={stagedToM}
+                onChange={(e) => { setStagedToM(Number(e.target.value)); setActivePreset('custom'); }}
+              >
+                {MINUTES.map((m) => <option key={m} value={m}>{pad2(m)}</option>)}
+              </select>
+              <div className="flex rounded-lg overflow-hidden shrink-0" style={{ border: '1px solid var(--border)' }}>
+                {(['AM', 'PM'] as const).map((v) => (
+                  <button
+                    key={v}
+                    className="px-2 py-2 text-xs font-bold cursor-pointer transition-colors"
+                    style={{
+                      background: stagedToAP === v ? 'var(--primary)' : 'var(--input-background)',
+                      color: stagedToAP === v ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
+                      border: 'none',
+                    }}
+                    onClick={() => { setStagedToAP(v); setActivePreset('custom'); }}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Apply button + inline unsaved indicator */}
+          <div className="flex items-center gap-2 sm:self-end sm:pb-0.5 pt-1 sm:pt-0">
+            <motion.button
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-xl text-sm font-semibold cursor-pointer relative overflow-hidden"
+              style={{
+                background: justApplied ? 'var(--status-low)' : 'var(--primary)',
+                color: justApplied ? '#fff' : 'var(--primary-foreground)',
+                border: 'none',
+                boxShadow: isDirty ? '0 0 0 2px var(--primary), 0 2px 8px rgba(0,0,0,0.15)' : '0 1px 4px rgba(0,0,0,0.1)',
+              }}
+              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.03 }}
+              onClick={applyDateRange}
+            >
+              <AnimatePresence mode="wait">
+                {justApplied ? (
+                  <motion.span
+                    key="applied"
+                    className="flex items-center gap-1.5"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Check className="size-4" />
+                    Applied!
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="apply"
+                    className="flex items-center gap-1.5"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Check className="size-4" />
+                    Apply
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
+            <AnimatePresence>
+              {isDirty && (
+                <motion.span
+                  initial={{ opacity: 0, x: -4 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -4 }}
+                  className="text-xs font-medium whitespace-nowrap"
+                  style={{ color: 'var(--primary)' }}
+                >
+                  Unsaved changes
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
 
         {/* Building / Level — only for heatmap view */}
         {viewMode === 'heatmap' && (
-          <>
-            <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+            <label className="flex flex-col gap-1.5 text-xs font-medium tracking-wide uppercase" style={{ color: 'var(--muted-foreground)' }}>
               Building
               <select
-                className="rounded-lg px-2 py-1.5 text-sm min-w-40"
+                className="rounded-xl px-3 py-2 text-sm font-normal normal-case w-full sm:min-w-40"
                 style={inputStyle}
                 value={building}
                 onChange={(e) => handleBuildingChange(e.target.value as Building)}
               >
-                <option value="">— Select —</option>
-                <option value="HE">HE — Herzberg</option>
-                <option value="LI">LI — Library</option>
+                <option value="">-- Select --</option>
+                <option value="HE">HE -- Herzberg</option>
+                <option value="LI">LI -- Library</option>
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+            <label className="flex flex-col gap-1.5 text-xs font-medium tracking-wide uppercase" style={{ color: 'var(--muted-foreground)' }}>
               Level
               <select
-                className="rounded-lg px-2 py-1.5 text-sm min-w-36"
+                className="rounded-xl px-3 py-2 text-sm font-normal normal-case w-full sm:min-w-36"
                 style={inputStyle}
                 value={level}
                 disabled={building === ''}
@@ -290,7 +554,7 @@ export default function HistoryPage() {
                 ))}
               </select>
             </label>
-          </>
+          </div>
         )}
       </div>
 
@@ -304,7 +568,7 @@ export default function HistoryPage() {
           <LoadingSpinner />
         ) : (
           <div className="space-y-4">
-            <div className="rounded-xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+            <div className="rounded-xl p-2 sm:p-4 min-w-0" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
               <HistoryChart data={data} />
             </div>
 

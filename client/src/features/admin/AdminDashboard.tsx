@@ -256,7 +256,7 @@ export default function AdminDashboard() {
   /* ── Render ─────────────────────────────────────────────────── */
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>
@@ -412,7 +412,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* ── Trend Chart ──────────────────────────────────── */}
-          <div className="rounded-xl p-4" style={cardStyle}>
+          <div className="rounded-xl p-2 sm:p-4 min-w-0" style={cardStyle}>
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
                 <TrendingUp className="inline-block size-4 mr-1.5 -mt-0.5" />
@@ -475,8 +475,8 @@ export default function AdminDashboard() {
           {/* ── Busiest Rooms ────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Bar chart */}
-            <div className="rounded-xl p-4" style={cardStyle}>
-              <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
+            <div className="rounded-xl p-2 sm:p-4 min-w-0" style={cardStyle}>
+              <h2 className="text-sm font-semibold mb-3 px-2 sm:px-0" style={{ color: 'var(--foreground)' }}>
                 <Eye className="inline-block size-4 mr-1.5 -mt-0.5" />
                 Top 5 Busiest Rooms
               </h2>
