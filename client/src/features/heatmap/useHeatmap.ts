@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { fetchHeatmap } from '../../api/heatmap';
 import { usePolling } from '../../shared/hooks/usePolling';
 import type { HeatmapAP, ApRecord } from './types';
@@ -41,9 +41,13 @@ interface UseHeatmapResult {
   aps: ApRecord[];
   totalWireless: number;
   totalWired: number;
+  /** True only on the very first load (no data yet). False during subsequent refreshes. */
   loading: boolean;
+  /** True while a background refresh is in progress (data is still shown). */
+  refreshing: boolean;
   error: string | null;
-  lastUpdated: number | null;
+  /** Epoch (seconds) when the server poller last captured the data. */
+  polledAt: number | null;
 }
 
 export function useHeatmap(siteId?: string): UseHeatmapResult {
@@ -51,10 +55,17 @@ export function useHeatmap(siteId?: string): UseHeatmapResult {
   const [totalWireless, setTotalWireless] = useState(0);
   const [totalWired, setTotalWired] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [polledAt, setPolledAt] = useState<number | null>(null);
+  const hasFetched = useRef(false);
 
   const load = useCallback(() => {
+    // On subsequent fetches, signal a background refresh instead of full loading
+    if (hasFetched.current) {
+      setRefreshing(true);
+    }
+
     fetchHeatmap(siteId)
       .then((data: HeatmapAP[]) => {
         const records = data.flatMap((ap) => {
@@ -62,19 +73,27 @@ export function useHeatmap(siteId?: string): UseHeatmapResult {
           return record ? [record] : [];
         });
         setAps(records);
-        // Only count clients from APs that matched HE/LI (visible on the floor plan)
         setTotalWireless(records.reduce((sum, r) => sum + r.clientCount, 0));
         setTotalWired(records.reduce((sum, r) => sum + r.wiredCount, 0));
         setError(null);
-        setLastUpdated(Math.floor(Date.now() / 1000));
+        // Derive polledAt from the max epoch across all APs
+        const maxEpoch = data.reduce((max, ap) => {
+          const e = ap.epoch ?? 0;
+          return e > max ? e : max;
+        }, 0);
+        setPolledAt(maxEpoch || null);
+        hasFetched.current = true;
       })
       .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
   }, [siteId]);
 
   // Immediate fetch on mount + poll every 30 seconds
   usePolling(load, THIRTY_SECONDS);
 
-  return { aps, totalWireless, totalWired, loading, error, lastUpdated };
+  return { aps, totalWireless, totalWired, loading, refreshing, error, polledAt };
 }
 

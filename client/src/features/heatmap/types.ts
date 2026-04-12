@@ -15,6 +15,8 @@ export interface HeatmapAP {
   building: string | null;
   client_count: number;
   wired_client_count: number;
+  /** Epoch (seconds) when the server poller last captured this snapshot */
+  epoch: number | null;
 }
 
 /**

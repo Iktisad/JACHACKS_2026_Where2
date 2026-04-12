@@ -83,7 +83,7 @@ export default function AdminDashboard() {
   const now = Math.floor(Date.now() / 1000);
 
   /* Live data */
-  const { aps, totalWireless, totalWired, loading: heatmapLoading, error: heatmapError, lastUpdated } = useHeatmap();
+  const { aps, totalWireless, totalWired, loading: heatmapLoading, error: heatmapError, polledAt } = useHeatmap();
 
   /* History data (for trend chart) */
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
@@ -237,9 +237,9 @@ export default function AdminDashboard() {
         </h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
           Campus-wide occupancy overview
-          {lastUpdated && (
+          {polledAt && (
             <span className="ml-2">
-              &middot; Updated {formatEpochFull(lastUpdated)}
+              &middot; Updated {formatEpochFull(polledAt)}
             </span>
           )}
         </p>

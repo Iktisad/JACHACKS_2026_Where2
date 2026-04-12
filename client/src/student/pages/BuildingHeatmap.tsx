@@ -20,7 +20,7 @@ export function BuildingHeatmap() {
   const levels = building && building in LEVELS ? LEVELS[building as 'HE' | 'LI'] : [];
   const [level, setLevel] = useState(levels[0] ?? '0');
 
-  const { aps, loading, lastUpdated } = useHeatmap();
+  const { aps, loading, refreshing, polledAt } = useHeatmap();
 
   // Filter APs to this building
   const buildingAPs = useMemo(
@@ -84,7 +84,7 @@ export function BuildingHeatmap() {
               Live occupancy heatmap
             </p>
           </div>
-          {loading && (
+          {(loading || refreshing) && (
             <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--primary)' }} />
           )}
         </div>
@@ -107,11 +107,11 @@ export function BuildingHeatmap() {
             <span className="text-[12px]" style={{ color: 'var(--muted-foreground)' }}>Wired</span>
             <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'var(--foreground)' }}>{totalWired}</span>
           </div>
-          {lastUpdated && (
+          {polledAt && (
             <>
               <div className="ml-auto" />
               <span className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
-                Updated {new Date(lastUpdated * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                Data from {new Date(polledAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             </>
           )}

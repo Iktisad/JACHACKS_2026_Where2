@@ -13,7 +13,7 @@ export default function HeatmapPage() {
   const [level, setLevel] = useState<string>(LEVELS['HE'][0]);
 
   const { sites } = useSites();
-  const { aps, totalWireless, totalWired, loading, error, lastUpdated } = useHeatmap(siteId || undefined);
+  const { aps, totalWireless, totalWired, loading, error, polledAt } = useHeatmap(siteId || undefined);
 
   const selectedSite = sites.find((s) => s.id === siteId);
   const JAC_PATTERN = /jac|herzberg|library|john\s*abbott/i;
@@ -64,9 +64,9 @@ export default function HeatmapPage() {
         />
       )}
 
-      {lastUpdated && (
+      {polledAt && (
         <p className="text-xs text-right" style={{ color: 'var(--muted-foreground)' }}>
-          Last updated: {formatEpochFull(lastUpdated)}
+          Last updated: {formatEpochFull(polledAt)}
         </p>
       )}
     </div>

@@ -19,13 +19,28 @@ export class HeatmapController {
     try {
       const siteId = req.query['site_id'] as string | undefined;
       const db = this.db.getKnex();
+      // Find the most recent epoch that has actual client data.
+      // Multiple sites poll seconds apart, so we pick the latest epoch
+      // with non-zero totals to avoid returning a batch of zeros.
+      const latestRow = await db('ap_snapshots')
+        .select('epoch')
+        .groupBy('epoch')
+        .orderBy('epoch', 'desc')
+        .havingRaw('SUM(client_count) + SUM(wired_client_count) > 0')
+        .first();
+
+      // Fall back to absolute latest if everything is genuinely zero
+      const latestEpoch = latestRow?.epoch
+        ?? (await db('ap_snapshots').max('epoch as epoch').first())?.epoch;
+
+      if (!latestEpoch) {
+        res.json([]);
+        return;
+      }
+
       let q = db('access_points as ap')
         .leftJoin('ap_snapshots as s', function () {
-          this.on('s.ap_id', '=', 'ap.id').andOn(
-            's.epoch',
-            '=',
-            db.raw('(SELECT MAX(s2.epoch) FROM ap_snapshots s2 WHERE s2.ap_id = ap.id)'),
-          );
+          this.on('s.ap_id', '=', 'ap.id').andOn('s.epoch', '=', db.raw('?', [latestEpoch]));
         })
         .select(
           'ap.id as ap_id',
@@ -33,6 +48,7 @@ export class HeatmapController {
           'ap.building',
           db.raw('COALESCE(s.client_count, 0) as client_count'),
           db.raw('COALESCE(s.wired_client_count, 0) as wired_client_count'),
+          db.raw('? as epoch', [latestEpoch]),
         );
       if (siteId) q = q.where('ap.site_id', siteId);
       res.json(await q);

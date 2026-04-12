@@ -129,7 +129,7 @@ export function MapView() {
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [query, setQuery] = useState('');
 
-  const { aps } = useHeatmap();
+  const { aps, refreshing, polledAt } = useHeatmap();
 
   // Aggregate live client counts per building
   const buildingClients = BUILDINGS.map((b) => {
@@ -244,9 +244,15 @@ export function MapView() {
               </h3>
               <p className="text-[12px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
                 Tap a building to view live occupancy
+                {polledAt && (
+                  <span> · Data from {new Date(polledAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                )}
               </p>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
+              {refreshing && (
+                <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--primary)' }} />
+              )}
               <Users className="w-3.5 h-3.5" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} />
               <span className="text-[13px] font-medium tabular-nums" style={{ color: 'var(--muted-foreground)' }}>
                 {totalClients} online
