@@ -147,6 +147,10 @@ interface Props {
   timeTo: number;
   onTimeFromChange: (v: number) => void;
   onTimeToChange: (v: number) => void;
+  /** Hide the top filter row (site/building/level/stats) — parent manages them */
+  hideFilters?: boolean;
+  /** Hide the built-in timeline scrubber — parent provides its own */
+  hideTimeline?: boolean;
 }
 
 function toDatetimeLocal(epochSeconds: number): string {
@@ -184,6 +188,8 @@ export default function FloorPlanMap({
   timeTo,
   onTimeFromChange,
   onTimeToChange,
+  hideFilters = false,
+  hideTimeline = false,
 }: Props) {
   const [hoveredApKey, setHoveredApKey] = useState<string | null>(null);
 
@@ -212,7 +218,7 @@ export default function FloorPlanMap({
   return (
     <div className="w-full overflow-auto rounded-xl p-3 space-y-3" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
       {/* ── Filters row ────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-end gap-4">
+      {!hideFilters && <div className="flex flex-wrap items-end gap-4">
         <label className="flex flex-col gap-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
           Site
           <select
@@ -260,17 +266,6 @@ export default function FloorPlanMap({
         </label>
 
         <div className="ml-auto flex items-end gap-4 pb-0.5">
-          <button
-            className="text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors self-end cursor-pointer"
-            style={{
-              background: timelineMode ? 'var(--primary)' : 'var(--card)',
-              color: timelineMode ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
-              border: timelineMode ? '1px solid var(--primary)' : '1px solid var(--border)',
-            }}
-            onClick={() => onTimelineModeChange(!timelineMode)}
-          >
-            {timelineMode ? 'Live' : 'History'}
-          </button>
           <div className="text-right">
             <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Wireless</p>
             <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{totalWireless}</p>
@@ -284,10 +279,10 @@ export default function FloorPlanMap({
             <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{renderedAPs.length}</p>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ── Timeline scrubber — shown below filters when history mode is active ── */}
-      {timelineMode && (
+      {!hideTimeline && timelineMode && (
         <div className="pt-3 space-y-2" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="flex flex-wrap items-center gap-3">
             <input

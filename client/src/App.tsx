@@ -17,7 +17,7 @@ function AdminShell() {
         </NavLink>
         {[
           { to: '/admin/history', label: 'History' },
-          { to: '/admin/heatmap', label: 'Heatmap' },
+          { to: '/admin/heatmap', label: 'Live Heatmap' },
         ].map(({ to, label }) => (
           <NavLink
             key={to}
