@@ -7,6 +7,9 @@ interface User {
   avatar: string;
   tokens: number;
   isCurrentUser: boolean;
+  totalSessions?: number;
+  studyHours?: number;
+  streak?: number;
 }
 
 interface UserProfileModalProps {
@@ -30,9 +33,9 @@ export function UserProfileModal({ user, onClose }: UserProfileModalProps) {
   if (!user) return null;
 
   const stats = [
-    { label: 'Study Hours', value: '127h',   icon: Timer,      color: 'text-primary'  },
-    { label: 'Sessions',    value: '43',      icon: MapPin,     color: 'text-accent'   },
-    { label: 'Streak',      value: '12 days', icon: TrendingUp, color: 'text-warning'  },
+    { label: 'Study Hours', value: `${user.studyHours ?? 0}h`,            icon: Timer,      color: 'text-primary'  },
+    { label: 'Sessions',    value: String(user.totalSessions ?? 0),        icon: MapPin,     color: 'text-accent'   },
+    { label: 'Streak',      value: `${user.streak ?? 0} days`,             icon: TrendingUp, color: 'text-warning'  },
   ];
 
   const recentActivity = [

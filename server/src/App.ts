@@ -9,6 +9,7 @@ import type { DevicesController } from './routes/DevicesController.js';
 import type { HistoryController } from './routes/HistoryController.js';
 import type { HeatmapController } from './routes/HeatmapController.js';
 import type { AiController } from './routes/AiController.js';
+import type { UsersController } from './routes/UsersController.js';
 
 export class App {
   private readonly express: Application;
@@ -22,6 +23,7 @@ export class App {
     private readonly historyController: HistoryController,
     private readonly heatmapController: HeatmapController,
     private readonly aiController: AiController,
+    private readonly usersController: UsersController,
   ) {
     this.express = express();
     this.applyMiddleware();
@@ -45,6 +47,7 @@ export class App {
     this.express.use('/api/history', this.historyController.router);
     this.express.use('/api/heatmap', this.heatmapController.router);
     this.express.use('/api/ai', this.aiController.router);
+    this.express.use('/api/users', this.usersController.router);
   }
 
   private registerErrorHandler(): void {
@@ -56,6 +59,7 @@ export class App {
 
   async start(): Promise<void> {
     await this.db.connect();
+    await this.usersController.seedOnStartup();
     this.poller.start();
     this.express.listen(this.config.PORT, () => {
       console.log(`[server] listening on http://localhost:${this.config.PORT}`);

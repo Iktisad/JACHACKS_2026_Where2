@@ -45,6 +45,22 @@ export class GeminiService {
     });
   }
 
+  async generateNudge(stats: {
+    name: string; rank: number; streak: number;
+    tokens: number; studyHours: number; totalSessions: number;
+  }): Promise<string> {
+    const prompt = `You are a friendly study coach at John Abbott College.
+A student has the following stats: name: ${stats.name}, leaderboard rank: #${stats.rank}, streak: ${stats.streak} days, tokens earned: ${stats.tokens}, total study hours: ${stats.studyHours}h, sessions completed: ${stats.totalSessions}.
+Write ONE short motivational sentence (max 20 words) personalised to their stats. Be specific and warm. No bullet points, no quotes.`;
+
+    const result = await this.ai.models.generateContent({
+      model: this.cfg.model,
+      contents: prompt,
+      config: { maxOutputTokens: 80, temperature: 0.8 },
+    });
+    return (result.text ?? '').trim();
+  }
+
   async suggestSpace(criteria: AiCriteria, spaces: AiSpace[]): Promise<AiSuggestion> {
     const prompt = `You are a study spot assistant at John Abbott College in Montreal.
 Given the student's preferences and the list of available study spaces with live occupancy data, recommend the single best study spot.

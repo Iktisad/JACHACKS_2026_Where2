@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Map, Timer, Trophy, ChevronDown, User, LogOut, Sliders } from 'lucide-react';
+import { LayoutDashboard, Map, Timer, Trophy, ChevronDown, User, LogOut, Sliders, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useAuth } from '../context/AuthContext';
@@ -129,6 +129,16 @@ export function DesktopSidebar() {
                 >
                   <Sliders className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} />
                   Preferences
+                </Link>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item asChild>
+                <Link
+                  to="/student/ai-log"
+                  className="flex items-center gap-2.5 px-3 py-2 text-[13px] rounded-lg outline-none cursor-pointer"
+                  style={{ color: 'var(--foreground)' }}
+                >
+                  <Sparkles className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.7} />
+                  AI Memory Log
                 </Link>
               </DropdownMenu.Item>
               <DropdownMenu.Separator className="h-px my-1" style={{ background: 'var(--border)' }} />

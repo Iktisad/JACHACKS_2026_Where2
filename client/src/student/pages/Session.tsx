@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Pause, Square, Timer, MapPin, Coins, TrendingUp, ArrowRight } from 'lucide-react';
+import { Play, Pause, Square, Timer, MapPin, Coins, TrendingUp, ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
-import { recordSession, updateProfile } from '../services/backboard';
+import { recordSession, updateProfile, getNudge } from '../services/backboard';
 
 export function Session() {
   const { user, refreshUser } = useAuth();
@@ -11,6 +11,9 @@ export function Session() {
   const [sessionTime, setSessionTime] = useState(0);
   const [currentSpace] = useState('Casgrain 202');
   const [currentSpaceId] = useState(1);
+  const [sessionName, setSessionName] = useState('');
+  const [sessionNudge, setSessionNudge] = useState<string | null>(null);
+  const [nudgeLoading, setNudgeLoading] = useState(false);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -35,20 +38,29 @@ export function Session() {
   async function endSession() {
     setSessionActive(false);
     if (sessionTime > 0) {
+      const label = sessionName.trim() || 'Study Session';
       await recordSession({
         spaceId: currentSpaceId,
-        spaceName: currentSpace,
+        spaceName: `${label} @ ${currentSpace}`,
         startedAt: new Date(Date.now() - sessionTime * 1000).toISOString(),
         durationSeconds: sessionTime,
         tokensEarned,
       });
       if (user) {
-        await updateProfile({
+        const updatedProfile = {
           tokens: (user.tokens || 0) + tokensEarned,
           totalSessions: (user.totalSessions || 0) + 1,
           studyHours: Math.round((user.studyHours || 0) + sessionTime / 3600),
-        });
+        };
+        await updateProfile(updatedProfile);
         refreshUser();
+        // Fetch a personalised nudge after the session ends
+        setNudgeLoading(true);
+        setSessionNudge(null);
+        getNudge({ ...user, ...updatedProfile }).then((msg) => {
+          setSessionNudge(msg);
+          setNudgeLoading(false);
+        });
       }
     }
     setSessionTime(0);
@@ -82,9 +94,9 @@ export function Session() {
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--primary) 12%, transparent)' }}>
               <MapPin className="w-4 h-4" style={{ color: 'var(--primary)' }} strokeWidth={1.8} />
             </div>
-            <div>
-              <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>Studying at</p>
-              <p className="text-[15px] font-semibold leading-tight" style={{ color: 'var(--foreground)' }}>{currentSpace}</p>
+            <div className="min-w-0">
+              <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>{sessionName.trim() || 'Study Session'}</p>
+              <p className="text-[15px] font-semibold leading-tight truncate" style={{ color: 'var(--foreground)' }}>{currentSpace}</p>
             </div>
           </div>
         )}
@@ -120,6 +132,23 @@ export function Session() {
             </div>
           </div>
 
+          {!sessionActive && (
+            <div className="mb-4">
+              <label className="block text-[11px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: 'var(--muted-foreground)' }}>
+                Session name <span style={{ color: 'var(--muted-foreground)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={sessionName}
+                onChange={(e) => setSessionName(e.target.value)}
+                placeholder="e.g. Algorithms exam prep"
+                maxLength={60}
+                className="w-full px-4 py-2.5 rounded-xl border text-[14px] focus:outline-none transition-colors"
+                style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+              />
+            </div>
+          )}
+
           <div className="flex gap-2.5">
             {!sessionActive ? (
               <button
@@ -153,6 +182,32 @@ export function Session() {
           </div>
         </div>
 
+        {!sessionActive && (nudgeLoading || sessionNudge) && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border overflow-hidden"
+            style={{ background: 'color-mix(in srgb, var(--primary) 5%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 18%, transparent)' }}
+          >
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: 'color-mix(in srgb, var(--primary) 12%, transparent)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)' }}>
+              <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--primary)' }} strokeWidth={1.8} />
+              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'color-mix(in srgb, var(--primary) 70%, transparent)' }}>
+                Session Summary
+              </p>
+            </div>
+            <div className="px-4 py-3">
+              {nudgeLoading ? (
+                <div className="animate-pulse space-y-2">
+                  <div className="h-3 rounded w-4/5" style={{ background: 'var(--muted)' }} />
+                  <div className="h-3 rounded w-3/5" style={{ background: 'var(--muted)' }} />
+                </div>
+              ) : (
+                <p className="text-[13px] leading-relaxed" style={{ color: 'var(--foreground)' }}>{sessionNudge}</p>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {!sessionActive && (
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold px-0.5" style={{ color: 'var(--foreground)' }}>Quick Start</h3>
@@ -164,18 +219,6 @@ export function Session() {
                 <div>
                   <p className="font-semibold text-[14px]" style={{ color: 'var(--foreground)' }}>Find a Space</p>
                   <p className="text-[12px]" style={{ color: 'var(--muted-foreground)' }}>Browse available spots</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.5} />
-            </Link>
-            <Link to="/student/space/1" className="flex items-center justify-between p-4 rounded-xl border transition-colors" style={{ background: 'color-mix(in srgb, var(--primary) 5%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 12%, transparent)' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--primary) 10%, transparent)' }}>
-                  <Timer className="w-5 h-5" style={{ color: 'var(--primary)' }} strokeWidth={1.8} />
-                </div>
-                <div>
-                  <p className="font-semibold text-[14px]" style={{ color: 'var(--foreground)' }}>Last Location</p>
-                  <p className="text-[12px]" style={{ color: 'var(--muted-foreground)' }}>{currentSpace}</p>
                 </div>
               </div>
               <ArrowRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} strokeWidth={1.5} />

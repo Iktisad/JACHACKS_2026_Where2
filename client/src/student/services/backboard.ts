@@ -54,6 +54,18 @@ const USERS_KEY     = 'whereto_mock_users';
 const SESSIONS_KEY  = 'whereto_sessions';
 export const SHARED_DARK_KEY = 'whereto_dark';
 
+// Bump this any time the Backboard API integration changes shape.
+// On mismatch the cached assistant/thread IDs are wiped so fresh ones are created.
+const BB_VERSION_KEY = 'whereto_bb_version';
+const BB_VERSION = '2';
+(function purgeStaleBBCache() {
+  if (localStorage.getItem(BB_VERSION_KEY) !== BB_VERSION) {
+    localStorage.removeItem(THREAD_KEY);
+    localStorage.removeItem(ASSISTANT_KEY);
+    localStorage.setItem(BB_VERSION_KEY, BB_VERSION);
+  }
+})();
+
 function saveLocal(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
@@ -99,25 +111,83 @@ async function getOrCreateAssistant(): Promise<string | null> {
 async function getOrCreateThread(assistantId: string): Promise<string | null> {
   const cached = loadLocal<string>(THREAD_KEY);
   if (cached) return cached;
-  const data = await bbFetch('POST', 'threads', { assistant_id: assistantId });
+  // Correct endpoint: POST /assistants/:id/threads
+  const data = await bbFetch('POST', `assistants/${assistantId}/threads`, {});
   const id: string | null = data?.thread_id ?? data?.threadId ?? null;
   if (id) saveLocal(THREAD_KEY, id);
   return id;
 }
 
-/** Fire-and-forget audit log to Backboard. Never throws. */
-async function pushMessage(content: string): Promise<void> {
+/**
+ * Store a fact in Backboard memory (free-tier supported).
+ * Uses memory:"Only" so Backboard extracts and stores the fact without
+ * needing a paid LLM response.
+ */
+export async function storeMemory(content: string): Promise<void> {
   try {
     const assistantId = await getOrCreateAssistant();
     if (!assistantId) return;
     const threadId = await getOrCreateThread(assistantId);
     if (!threadId) return;
     await bbFetch('POST', `threads/${threadId}/messages`, {
+      assistant_id: assistantId,
       content,
-      memory: 'Auto',
+      memory: 'Only',
       stream: false,
     });
   } catch { /* silent */ }
+}
+
+/**
+ * Get a personalised nudge powered by Gemini on the server.
+ * Backboard stores the user's activity history; Gemini generates the nudge.
+ */
+export async function getNudge(user: UserProfile): Promise<string | null> {
+  try {
+    const res = await fetch('/api/ai/nudge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: user.name,
+        rank: user.rank,
+        streak: user.streak,
+        tokens: user.tokens,
+        studyHours: user.studyHours,
+        totalSessions: user.totalSessions,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { nudge?: string };
+    return data.nudge ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export interface BackboardMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  status?: string;
+  created_at?: string;
+}
+
+/**
+ * Fetch all messages stored in the user's Backboard thread.
+ * GET /api/threads/:id returns { messages: [...] }
+ */
+export async function getThreadMessages(): Promise<BackboardMessage[]> {
+  try {
+    const assistantId = await getOrCreateAssistant();
+    if (!assistantId) return [];
+    const threadId = await getOrCreateThread(assistantId);
+    if (!threadId) return [];
+    // Correct endpoint: GET /threads/:id returns the thread object with messages[]
+    const data = await bbFetch('GET', `threads/${threadId}`);
+    return Array.isArray(data?.messages) ? data.messages : [];
+  } catch {
+    return [];
+  }
 }
 
 // ── Auth ───────────────────────────────────────────────────────
@@ -188,7 +258,7 @@ export async function register(
   saveUsers(users);
   saveLocal(USER_KEY, profile);
 
-  pushMessage(`New user registered: ${name} (${email}). Profile: ${JSON.stringify(profile)}`);
+  storeMemory(`New user registered: ${name} (${email}). Profile: ${JSON.stringify(profile)}`);
   return profile;
 }
 
@@ -202,7 +272,7 @@ export async function login(email: string, password: string): Promise<UserProfil
 
   const { passwordHash: _ph, ...profile } = stored;
   saveLocal(USER_KEY, profile);
-  pushMessage(`User logged in: ${email}`);
+  storeMemory(`User logged in: ${email}`);
   return profile as UserProfile;
 }
 
@@ -237,7 +307,7 @@ export async function savePreferences(prefs: UserPreferences): Promise<void> {
   // Keep the shared dark key in sync so admin side picks it up too
   localStorage.setItem(SHARED_DARK_KEY, String(!!prefs.darkMode));
   const user = getCurrentUser();
-  if (user) pushMessage(`${user.email} updated preferences: ${JSON.stringify(prefs)}`);
+  if (user) storeMemory(`${user.email} updated preferences: ${JSON.stringify(prefs)}`);
 }
 
 // ── Profile update ─────────────────────────────────────────────
@@ -258,7 +328,7 @@ export async function updateProfile(
     saveUsers(users);
   }
 
-  pushMessage(`Profile updated for ${current.email}: ${JSON.stringify(updates)}`);
+  storeMemory(`Profile updated for ${current.email}: ${JSON.stringify(updates)}`);
   return updated;
 }
 
@@ -274,5 +344,5 @@ export async function recordSession(session: SessionRecord): Promise<void> {
   saveLocal(SESSIONS_KEY, sessions.slice(0, 50));
 
   const user = getCurrentUser();
-  if (user) pushMessage(`Session recorded for ${user.email}: ${JSON.stringify(session)}`);
+  if (user) storeMemory(`Session recorded for ${user.email}: ${JSON.stringify(session)}`);
 }

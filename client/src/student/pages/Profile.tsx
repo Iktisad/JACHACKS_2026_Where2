@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
   Settings, Coins, Timer, MapPin, Award, ChevronRight,
   Bell, Moon, HelpCircle, LogOut, GraduationCap, Sliders,
-  Pencil, X, Check, Loader2, User,
+  Pencil, X, Check, Loader2, User, Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -234,6 +234,25 @@ export function Profile() {
                 )}
               </button>
             ))}
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+            <Link
+              to="/student/ai-log"
+              className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border transition-colors"
+              style={{ background: 'color-mix(in srgb, var(--primary) 5%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 18%, transparent)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--primary) 10%, transparent)' }}>
+                  <Sparkles className="w-[17px] h-[17px]" style={{ color: 'var(--primary)' }} strokeWidth={1.8} />
+                </div>
+                <div>
+                  <p className="font-semibold text-[14px]" style={{ color: 'var(--foreground)' }}>AI Memory Log</p>
+                  <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>View your Backboard.io thread</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'color-mix(in srgb, var(--muted-foreground) 50%, transparent)' }} strokeWidth={1.5} />
+            </Link>
           </motion.div>
 
           <motion.button

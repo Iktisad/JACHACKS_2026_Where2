@@ -164,7 +164,7 @@ export default function RoleSelectPage() {
       {/* ── Center Divider / Logo ─────────────────────────────── */}
       <div
         className="relative z-20 flex items-center justify-center lg:flex-col"
-        style={{ flexShrink: 0, height: 0, overflow: 'visible' }}
+        style={{ flexShrink: 0, width: 0, overflow: 'visible' }}
       >
         {/* Vertical line on desktop */}
         <div

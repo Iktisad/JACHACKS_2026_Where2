@@ -30,6 +30,29 @@ export class AiController {
 
   private registerRoutes(): void {
     this.router.post('/suggest', (req, res) => void this.suggest(req, res));
+    this.router.post('/nudge',   (req, res) => void this.nudge(req, res));
+  }
+
+  private async nudge(req: Request, res: Response): Promise<void> {
+    try {
+      const { name, rank, streak, tokens, studyHours, totalSessions } = req.body as {
+        name?: string; rank?: number; streak?: number;
+        tokens?: number; studyHours?: number; totalSessions?: number;
+      };
+      if (!name) { res.status(400).json({ error: 'name is required' }); return; }
+      const nudge = await this.gemini.generateNudge({
+        name: name ?? 'Student',
+        rank: rank ?? 99,
+        streak: streak ?? 0,
+        tokens: tokens ?? 0,
+        studyHours: studyHours ?? 0,
+        totalSessions: totalSessions ?? 0,
+      });
+      res.json({ nudge });
+    } catch (err) {
+      console.error('[ai] nudge error:', err);
+      res.status(500).json({ error: 'Nudge unavailable' });
+    }
   }
 
   private async suggest(req: Request, res: Response): Promise<void> {

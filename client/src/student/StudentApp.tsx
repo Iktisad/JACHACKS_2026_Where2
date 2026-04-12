@@ -12,6 +12,7 @@ import { Profile } from './pages/Profile';
 import { Preferences } from './pages/Preferences';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { BackboardLog } from './pages/BackboardLog';
 
 export function StudentApp() {
   return (
@@ -34,6 +35,7 @@ export function StudentApp() {
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="profile"   element={<Profile />} />
             <Route path="preferences" element={<Preferences />} />
+            <Route path="ai-log"      element={<BackboardLog />} />
           </Route>
         </Route>
 

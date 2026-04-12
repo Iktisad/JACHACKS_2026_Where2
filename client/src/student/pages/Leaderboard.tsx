@@ -1,21 +1,10 @@
-import { useState } from 'react';
-import { Trophy, Medal, Award, Crown, TrendingUp, ChevronDown, ChevronRight, Coins } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trophy, Medal, Award, Crown, TrendingUp, ChevronDown, ChevronRight, Coins, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserProfileModal } from '../components/UserProfileModal';
 import { useAuth } from '../context/AuthContext';
-
-const MOCK_LEADERBOARD = [
-  { rank: 1,  name: 'Emma Wilson',     avatar: 'EW', tokens: 342 },
-  { rank: 2,  name: 'Marcus Chen',     avatar: 'MC', tokens: 287 },
-  { rank: 3,  name: 'Sofia Rodriguez', avatar: 'SR', tokens: 251 },
-  { rank: 4,  name: 'Jordan Davis',    avatar: 'JD', tokens: 198 },
-  { rank: 5,  name: 'Aisha Patel',     avatar: 'AP', tokens: 176 },
-  { rank: 6,  name: "Liam O'Brien",    avatar: 'LO', tokens: 159 },
-  { rank: 7,  name: 'Maya Thompson',   avatar: 'MT', tokens: 143 },
-  { rank: 8,  name: 'Carlos Mendez',   avatar: 'CM', tokens: 128 },
-  { rank: 9,  name: 'Zara Khan',       avatar: 'ZK', tokens: 114 },
-  { rank: 10, name: 'Noah Anderson',   avatar: 'NA', tokens: 97  },
-];
+import { getNudge } from '../services/backboard';
+import { fetchLeaderboard, seedUsers, type LeaderEntry as ApiLeaderEntry } from '../../api/users';
 
 const PERIODS = ['This Week', 'This Month', 'All Time'];
 
@@ -25,24 +14,47 @@ const AVATAR_BG = [
   'bg-[#164863]', 'bg-[#427D9D]',
 ];
 
-type LeaderEntry = typeof MOCK_LEADERBOARD[number] & { isCurrentUser?: boolean };
+type LeaderEntry = ApiLeaderEntry & { isCurrentUser?: boolean };
 
 export function Leaderboard() {
   const { user } = useAuth();
   const [selectedUser, setSelectedUser] = useState<LeaderEntry | null>(null);
   const [activePeriod, setActivePeriod] = useState('This Week');
   const [showAll, setShowAll] = useState(false);
+  const [nudge, setNudge] = useState<string | null>(null);
+  const [nudgeLoading, setNudgeLoading] = useState(false);
+  const [rows, setRows] = useState<LeaderEntry[]>([]);
 
-  const leaderboardData: LeaderEntry[] = MOCK_LEADERBOARD.map((entry) => {
-    if (user && entry.name === user.name) {
-      return { ...entry, avatar: user.avatar, isCurrentUser: true };
-    }
-    return { ...entry, isCurrentUser: false };
-  });
+  // Seed + fetch on mount
+  useEffect(() => {
+    seedUsers()
+      .catch(() => {})
+      .finally(() => {
+        fetchLeaderboard().then((data) => {
+          setRows(data.map((e) => ({ ...e, isCurrentUser: user ? e.uid === user.uid : false })));
+        }).catch(() => {});
+      });
+  }, []);
 
+  // Mark current user once we have both rows and user
+  useEffect(() => {
+    if (!user || rows.length === 0) return;
+    setRows((prev) => prev.map((e) => ({ ...e, isCurrentUser: e.uid === user.uid })));
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!user) return;
+    setNudgeLoading(true);
+    getNudge(user).then((msg) => {
+      setNudge(msg);
+      setNudgeLoading(false);
+    });
+  }, [user?.uid]);
+
+  const leaderboardData: LeaderEntry[] = [...rows];
   const userInList = leaderboardData.some((e) => e.isCurrentUser);
   if (user && !userInList) {
-    leaderboardData.push({ rank: user.rank ?? 99, name: user.name, avatar: user.avatar, tokens: user.tokens, isCurrentUser: true });
+    leaderboardData.push({ uid: user.uid, rank: user.rank ?? 99, name: user.name, avatar: user.avatar, tokens: user.tokens, totalSessions: user.totalSessions, studyHours: user.studyHours, streak: user.streak, isCurrentUser: true });
   }
 
   const top3 = leaderboardData.slice(0, 3);
@@ -88,6 +100,32 @@ export function Leaderboard() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 pt-4 pb-12">
+        {(nudgeLoading || nudge) && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border mb-4 overflow-hidden"
+            style={{ background: 'color-mix(in srgb, var(--primary) 5%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 18%, transparent)' }}
+          >
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: 'color-mix(in srgb, var(--primary) 12%, transparent)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)' }}>
+              <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--primary)' }} strokeWidth={1.8} />
+              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'color-mix(in srgb, var(--primary) 70%, transparent)' }}>
+                AI Motivation
+              </p>
+            </div>
+            <div className="px-4 py-3">
+              {nudgeLoading ? (
+                <div className="animate-pulse space-y-2">
+                  <div className="h-3 rounded w-4/5" style={{ background: 'var(--muted)' }} />
+                  <div className="h-3 rounded w-3/5" style={{ background: 'var(--muted)' }} />
+                </div>
+              ) : (
+                <p className="text-[13px] leading-relaxed" style={{ color: 'var(--foreground)' }}>{nudge}</p>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}

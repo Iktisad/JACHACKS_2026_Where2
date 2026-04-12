@@ -7,6 +7,7 @@ import { DevicesController } from './routes/DevicesController.js';
 import { HistoryController } from './routes/HistoryController.js';
 import { HeatmapController } from './routes/HeatmapController.js';
 import { AiController } from './routes/AiController.js';
+import { UsersController } from './routes/UsersController.js';
 import { GeminiService } from './ai/GeminiService.js';
 import { App } from './App.js';
 
@@ -28,8 +29,9 @@ const geminiService = new GeminiService({
   timeoutMs: config.GEMINI_TIMEOUT_MS,
 });
 const aiController = new AiController(db, geminiService);
+const usersController = new UsersController(db);
 
-const app = new App(config, db, poller, sitesController, devicesController, historyController, heatmapController, aiController);
+const app = new App(config, db, poller, sitesController, devicesController, historyController, heatmapController, aiController, usersController);
 
 app.start().catch((err: unknown) => {
   console.error('[fatal]', err);
