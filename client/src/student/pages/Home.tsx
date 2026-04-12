@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Layers, SunMedium, Moon, Sun } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -6,48 +6,10 @@ import { useIsDesktop } from '../hooks/useMediaQuery';
 import { SpaceCard } from '../components/SpaceCard';
 import { AIRecommendation } from '../components/AIRecommendation';
 import { SpaceFinderPanel, type SpaceFinderFormState } from '../components/SpaceFinderPanel';
-import { runSpaceFinder, type FinderSpace } from '../services/spaceFinder';
+import { runSpaceFinder } from '../services/spaceFinder';
+import { useStudentSpaces } from '../hooks/useStudentSpaces';
 import { LiveStats } from '../components/LiveStats';
 import { useAuth } from '../context/AuthContext';
-
-const spaces: FinderSpace[] = [
-  {
-    id: 1,
-    name: 'Casgrain 202',
-    building: 'Casgrain Hall',
-    occupancy: 15,
-    capacity: 40,
-    status: 'low',
-    floor: '2nd Floor',
-    distance: '50m',
-    noiseLevel: 'Silent',
-    amenities: ['wifi', 'outlets', 'whiteboard', 'quiet'],
-  },
-  {
-    id: 2,
-    name: 'Library 3F',
-    building: 'Main Library',
-    occupancy: 28,
-    capacity: 35,
-    status: 'moderate',
-    floor: '3rd Floor',
-    distance: '120m',
-    noiseLevel: 'Quiet',
-    amenities: ['wifi', 'outlets', 'quiet', 'natural-light'],
-  },
-  {
-    id: 3,
-    name: 'Hochelaga 105',
-    building: 'Hochelaga Wing',
-    occupancy: 8,
-    capacity: 25,
-    status: 'low',
-    floor: '1st Floor',
-    distance: '200m',
-    noiseLevel: 'Moderate',
-    amenities: ['wifi', 'whiteboard', 'projector'],
-  },
-];
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -70,10 +32,16 @@ export function Home() {
     duration: preferences.defaultDuration,
   };
 
+  const { spaces, loading: spacesLoading } = useStudentSpaces();
+
   const [finderValues, setFinderValues] = useState<SpaceFinderFormState>(defaultFinder);
-  const [recommended, setRecommended] = useState<FinderSpace>(spaces[0]);
+  const [recommended, setRecommended] = useState<typeof spaces[0] | undefined>(undefined);
   const [insight, setInsight] = useState<string | undefined>(undefined);
   const [finderLoading, setFinderLoading] = useState(false);
+
+  useEffect(() => {
+    if (spaces[0] && !recommended) setRecommended(spaces[0]);
+  }, [spaces, recommended]);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
 
@@ -133,7 +101,7 @@ export function Home() {
           />
 
           <div className="mt-8 space-y-8">
-            <AIRecommendation space={recommended} insight={insight} loading={finderLoading} />
+            <AIRecommendation space={recommended} insight={insight} loading={finderLoading || spacesLoading || !recommended} />
 
             <motion.section
               initial={{ opacity: 0 }}
@@ -211,7 +179,7 @@ export function Home() {
       </div>
 
       <div className="px-4 mt-5 space-y-6 max-w-lg mx-auto">
-        <AIRecommendation space={recommended} insight={insight} loading={finderLoading} />
+        <AIRecommendation space={recommended} insight={insight} loading={finderLoading || spacesLoading || !recommended} />
 
         <section>
           <div className="flex items-center justify-between mb-4">

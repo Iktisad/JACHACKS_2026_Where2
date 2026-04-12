@@ -3,9 +3,8 @@ import { motion } from 'motion/react';
 
 const BUILDINGS = [
   { value: 'all', label: 'Any building' },
-  { value: 'Casgrain Hall', label: 'Casgrain Hall' },
   { value: 'Main Library', label: 'Main Library' },
-  { value: 'Hochelaga Wing', label: 'Hochelaga Wing' },
+  { value: 'Herzberg Building', label: 'Herzberg Building' },
 ] as const;
 
 const ENVIRONMENTS = [
