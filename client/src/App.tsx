@@ -6,13 +6,11 @@ import { AdminLayout } from '@/features/admin/components/AdminLayout'
 import { AdminAuthProvider } from '@/features/admin/context/AdminAuthContext'
 import { AdminProtectedRoute, AdminGuestRoute } from '@/features/admin/components/AdminProtectedRoute'
 import { AdminLogin } from '@/features/admin/pages/AdminLogin'
-import RoleSelectPage from '@/features/role-select/RoleSelectPage'
-import { StudentApp } from '@/student/StudentApp'
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<RoleSelectPage />} />
+      <Route path="/" element={<Navigate to="/admin" replace />} />
 
       <Route path="/admin/*" element={
         <AdminAuthProvider>
@@ -36,7 +34,7 @@ export default function App() {
         </AdminAuthProvider>
       } />
 
-      <Route path="/student/*" element={<StudentApp />} />
+      <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>
   )
 }
