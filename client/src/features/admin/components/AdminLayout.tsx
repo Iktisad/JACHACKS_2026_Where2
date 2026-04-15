@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminBottomNav } from './AdminBottomNav';
-import { useIsDesktop } from '../../../student/hooks/useMediaQuery';
+import { useIsDesktop } from '../../../shared/hooks/useMediaQuery';
 
 export function AdminLayout() {
   const isDesktop = useIsDesktop();
