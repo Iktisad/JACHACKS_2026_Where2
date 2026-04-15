@@ -181,7 +181,7 @@ export default function FloorPlanMap({
   totalWireless,
   totalWired,
   timelineMode,
-  onTimelineModeChange,
+  onTimelineModeChange: _onTimelineModeChange,
   timelineEpochs,
   timelineScrubIndex,
   onTimelineScrubChange,

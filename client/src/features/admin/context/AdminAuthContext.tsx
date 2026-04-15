@@ -6,7 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import { SHARED_DARK_KEY } from '../../../student/services/backboard';
+import { SHARED_DARK_KEY } from '../../../shared/constants';
 
 // ── Types ──────────────────────────────────────────────────────
 
