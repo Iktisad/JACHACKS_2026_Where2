@@ -1,5 +1,14 @@
 import { apiFetch } from './client';
-import type { Device } from '../features/history/types';
+
+export interface Device {
+  id: string;
+  mac_address: string;
+  name: string;
+  model: string;
+  building: string;
+  site_id?: string;
+  updated_at: string;
+}
 
 export async function fetchDevices(siteId?: string): Promise<Device[]> {
   const params: Record<string, string> = {};
