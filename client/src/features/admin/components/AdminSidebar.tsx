@@ -120,14 +120,14 @@ export function AdminSidebar() {
             <LogOut className="size-3.5" strokeWidth={1.7} />
             Sign out
           </button>
-          <Link
-            to="/"
-            className="flex items-center gap-2 px-2 py-2 rounded-xl text-[12px] transition-colors"
-            style={{ color: 'var(--muted-foreground)' }}
+          <span
+            className="flex items-center gap-2 px-2 py-2 rounded-xl text-[12px] cursor-not-allowed select-none"
+            style={{ color: 'var(--muted-foreground)', opacity: 0.4 }}
+            title="Student dashboard unavailable"
           >
             <ArrowLeftRight className="size-3.5" strokeWidth={1.7} />
             Switch Role
-          </Link>
+          </span>
         </div>
       </div>
     </div>
